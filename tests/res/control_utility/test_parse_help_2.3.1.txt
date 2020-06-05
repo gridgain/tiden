@@ -1,0 +1,1 @@
+Example: --host {ip} --port {port} --{activate/deactivate} or without command --host {ip} --port {port} then will print status.

@@ -1,0 +1,39 @@
+Control utility [ver. 2.4.0#20180220-sha1:e862a36f]
+2018 Copyright(C) Apache Software Foundation
+User: mshonichev
+--------------------------------------------------------------------------------
+This utility can do the following commands:
+  Activate cluster:
+    control.sh [--host HOST_OR_IP] [--port PORT] --activate
+
+  Deactivate cluster:
+    control.sh [--host HOST_OR_IP] [--port PORT] --deactivate
+
+  Print current cluster state:
+    control.sh [--host HOST_OR_IP] [--port PORT] --state
+
+  Print cluster baseline topology:
+    control.sh [--host HOST_OR_IP] [--port PORT] --baseline
+
+  Add nodes into baseline topology:
+    control.sh [--host HOST_OR_IP] [--port PORT] --baseline add consistentId1[,consistentId2,....,consistentIdN]
+
+  Remove nodes from baseline topology:
+    control.sh [--host HOST_OR_IP] [--port PORT] --baseline remove consistentId1[,consistentId2,....,consistentIdN]
+
+  Set baseline topology:
+    control.sh [--host HOST_OR_IP] [--port PORT] --baseline set consistentId1[,consistentId2,....,consistentIdN]
+
+  Set baseline topology based on version:
+    control.sh [--host HOST_OR_IP] [--port PORT] --baseline version topologyVersion
+
+Default values:
+    HOST_OR_IP=127.0.0.1
+    PORT=11211
+
+Exit codes:
+    0 - successful execution.
+    1 - invalid arguments.
+    2 - connection failed.
+    3 - authentication failed.
+    4 - unexpected error.

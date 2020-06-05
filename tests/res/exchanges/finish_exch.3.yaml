@@ -1,0 +1,24 @@
+1:
+- !!python/tuple ['17:01:52,310', 'topVer=4, minorTopVer=1]', 'topVer=4, minorTopVer=1]']
+- !!python/tuple ['17:02:09,313', 'topVer=5, minorTopVer=0]', 'topVer=5, minorTopVer=0]']
+- !!python/tuple ['17:02:42,874', 'topVer=6, minorTopVer=0]', 'topVer=6, minorTopVer=0]']
+- !!python/tuple ['17:02:50,588', 'topVer=7, minorTopVer=0]', 'topVer=7, minorTopVer=0]']
+- !!python/tuple ['17:02:50,602', 'topVer=8, minorTopVer=0]', 'topVer=8, minorTopVer=0]']
+- !!python/tuple ['17:03:06,316', 'topVer=9, minorTopVer=0]', 'topVer=10, minorTopVer=0]']
+- !!python/tuple ['17:05:15,934', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]']
+- !!python/tuple ['17:05:36,806', 'topVer=12, minorTopVer=1]', 'topVer=12, minorTopVer=1]']
+2:
+- !!python/tuple ['17:05:16,163', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]']
+- !!python/tuple ['17:05:36,807', 'topVer=12, minorTopVer=1]', 'topVer=12, minorTopVer=1]']
+3:
+- !!python/tuple ['17:05:16,172', 'topVer=12, minorTopVer=0]', 'topVer=12, minorTopVer=0]']
+- !!python/tuple ['17:05:36,810', 'topVer=12, minorTopVer=1]', 'topVer=12, minorTopVer=1]']
+4:
+- !!python/tuple ['17:01:52,304', 'topVer=4, minorTopVer=1]', 'topVer=4, minorTopVer=1]']
+- !!python/tuple ['17:02:09,306', 'topVer=5, minorTopVer=0]', 'topVer=5, minorTopVer=0]']
+- !!python/tuple ['17:02:42,874', 'topVer=6, minorTopVer=0]', 'topVer=6, minorTopVer=0]']
+- !!python/tuple ['17:02:50,578', 'topVer=7, minorTopVer=0]', 'topVer=7, minorTopVer=0]']
+- !!python/tuple ['17:02:50,595', 'topVer=8, minorTopVer=0]', 'topVer=8, minorTopVer=0]']
+- !!python/tuple ['17:03:06,246', 'topVer=9, minorTopVer=0]', 'topVer=10, minorTopVer=0]']
+- !!python/tuple ['17:05:15,889', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]']
+- !!python/tuple ['17:05:36,779', 'topVer=12, minorTopVer=1]', 'topVer=12, minorTopVer=1]']

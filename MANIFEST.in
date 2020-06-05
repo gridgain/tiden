@@ -1,0 +1,6 @@
+include pyproject.toml
+include LICENSE.txt
+include CHANGES.md
+include README.md
+recursive-include docs *
+include build.sh

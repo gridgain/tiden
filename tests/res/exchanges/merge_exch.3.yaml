@@ -1,0 +1,13 @@
+1:
+- !!python/tuple ['17:03:06,257', 'topVer=9, minorTopVer=0]', 'topVer=10, minorTopVer=0]',
+  NODE_FAILED]
+- !!python/tuple ['17:05:15,897', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]',
+  NODE_JOINED]
+2:
+- !!python/tuple ['17:05:15,977', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]',
+  NODE_JOINED]
+4:
+- !!python/tuple ['17:03:06,114', 'topVer=9, minorTopVer=0]', 'topVer=10, minorTopVer=0]',
+  NODE_FAILED]
+- !!python/tuple ['17:05:15,639', 'topVer=11, minorTopVer=0]', 'topVer=12, minorTopVer=0]',
+  NODE_JOINED]

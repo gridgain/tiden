@@ -1,0 +1,32 @@
+1:
+# 41497998
+- !!python/tuple ['11:31:37,998', 'topVer=4, minor_topVer=1]', DISCOVERY_CUSTOM_EVT,
+  customEvt=ChangeGlobalStateMessage, ChangeGlobalStateMessage]
+# 41525198
+- !!python/tuple ['11:32:05,198', 'topVer=5, minor_topVer=0]', NODE_JOINED, 'customEvt=null,',
+  'null,']
+# 41559874
+- !!python/tuple ['11:32:39,874', 'topVer=6, minor_topVer=0]', NODE_FAILED, 'customEvt=null,',
+  'null,']
+# 41568617
+- !!python/tuple ['11:32:48,617', 'topVer=7, minor_topVer=0]', NODE_JOINED, 'customEvt=null,',
+  'null,']
+# 41612820
+- !!python/tuple ['11:33:32,820', 'topVer=8, minor_topVer=0]', NODE_FAILED, 'customEvt=null,',
+  'null,']
+4:
+# 41497976
+- !!python/tuple ['11:31:37,976', 'topVer=4, minor_topVer=1]', DISCOVERY_CUSTOM_EVT,
+  customEvt=ChangeGlobalStateMessage, ChangeGlobalStateMessage]
+# 41525191
+- !!python/tuple ['11:32:05,191', 'topVer=5, minor_topVer=0]', NODE_JOINED, 'customEvt=null,',
+  'null,']
+# 41559866
+- !!python/tuple ['11:32:39,866', 'topVer=6, minor_topVer=0]', NODE_FAILED, 'customEvt=null,',
+  'null,']
+# 41568612
+- !!python/tuple ['11:32:48,612', 'topVer=7, minor_topVer=0]', NODE_JOINED, 'customEvt=null,',
+  'null,']
+# 41582935
+- !!python/tuple ['11:33:02,935', 'topVer=8, minor_topVer=0]', NODE_FAILED, 'customEvt=null,',
+  'null,']

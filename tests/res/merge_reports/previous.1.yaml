@@ -1,0 +1,52 @@
+test_baseline-1548754556.054775:
+  asserts:
+  - status: passed
+  function: test_baseline_removing_one_node_with_loading
+  ignite_properties: &id002
+    gridgain_build: '1548677455'
+    gridgain_revision: c01dc5b95912602f77ef9d71e10069acc0569bb2
+    gridgain_version: 8.5.5
+    ignite_build: '1548325763'
+    ignite_rel_date: '28012019'
+    ignite_revision: 99f95d45e10a8409ac089342e53d0dcc4284e2d6
+    ignite_version: 2.5.5
+  last_status: passed
+  module: suites.snapshots.test_baseline.TestBaseline
+  pitr_enabled: false
+  suite_run_id: test_baseline-1548758860.3851302
+  test_case_id: 60276
+  test_configuration_options:
+  - zookeeper_enabled
+  - pitr_enabled
+  test_run_id: test_baseline-1548754556.054775
+  zookeeper_enabled: false
+test_baseline-1550482560.1559818:
+  asserts:
+  - status: passed
+  function: test_baseline_adding_one_node
+  ignite_properties: *id002
+  last_status: passed
+  module: suites.snapshots.test_baseline.TestBaseline
+  pitr_enabled: true
+  suite_run_id: test_baseline-1550482567.437178
+  test_case_id: 60268
+  test_configuration_options:
+  - zookeeper_enabled
+  - pitr_enabled
+  test_run_id: test_baseline-1550482560.1559818
+  zookeeper_enabled: false
+test_baseline-1550482560.2283757:
+  asserts:
+  - status: passed
+  function: test_baseline_adding_one_node
+  ignite_properties: *id002
+  last_status: not started
+  module: suites.snapshots.test_baseline.TestBaseline
+  pitr_enabled: true
+  suite_run_id: test_baseline-1550482567.437178
+  test_case_id: 60268
+  test_configuration_options:
+  - zookeeper_enabled
+  - pitr_enabled
+  test_run_id: test_baseline-1550482560.2283757
+  zookeeper_enabled: true

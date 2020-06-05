@@ -1,0 +1,57 @@
+Control utility [ver. 2.5.1-p160#20181119-sha1:1f4c5866]
+2018 Copyright(C) Apache Software Foundation
+User: mshonichev
+--------------------------------------------------------------------------------
+  The '--cache subcommand' is used to get information about and perform actions with caches. The command has the following syntax:
+
+  control.sh [--host HOST_OR_IP] [--port PORT] [--user USER] [--password PASSWORD] [--ping-interval PING_INTERVAL] [--ping-timeout PING_TIMEOUT] [--ssl_enabled] [--ssl_protocol SSL_PROTOCOL[, SSL_PROTOCOL_2, ...]] [--ssl_algorithm SSL_ALGORITHM] [--ssl_cipher_suites SSL_CIPHER_1[, SSL_CIPHER_2, ...]] [--ssl_key_store_type SSL_KEY_STORE_TYPE] [--ssl_key_store_path PATH] [--ssl_key_store_password PASSWORD] [--ssl_truststore_type SSL_TRUST_STORE_TYPE] [--ssl_truststore_path PATH] [--ssl_truststore_password PASSWORD] --cache[subcommand] <subcommand_parameters>
+
+  The subcommands that take [nodeId] as an argument ('list', 'contention' and 'validate_indexes') will be executed on the given node or on all server nodes if the option is not specified. Other commands will run on a random server node.
+
+
+  Subcommands:
+  --------------------------------------------------------------------------------
+
+  --cache list regexPattern [groups|seq] [nodeId] [--config] [--output-format multi-line]
+
+    Show information about caches, groups or sequences that match a regular expression. When executed without parameters, this subcommand prints the list of caches.
+
+    Parameters:
+      --config                    - print a all configuration parameters for each cache.
+      --output-format multi-line  - print configuration parameters per line. This option has effect only when used with --config and without [groups|seq].
+
+  --------------------------------------------------------------------------------
+
+  --cache contention minQueueSize [nodeId] [maxPrint]
+
+    Show the keys that are point of contention for multiple transactions.
+
+  --------------------------------------------------------------------------------
+
+  --cache idle_verify [--dump] [--skipZeros] [cache1,...,cacheN]
+
+    Verify counters and hash sums of primary and backup partitions for the specified caches on an idle cluster and print out the differences, if any.
+
+  --------------------------------------------------------------------------------
+
+  --cache validate_indexes [cache1,...,cacheN] [nodeId] [checkFirst N|checkThrough K]
+
+    Validate indexes on an idle cluster and print out the keys that are missing in the indexes.
+
+    Parameters:
+      checkFirst N    - validate only the first N keys
+      checkThrough K  - validate every Kth key
+
+  --------------------------------------------------------------------------------
+
+  --cache distribution nodeId|null [cacheName1,...,cacheNameN] [--user-attributes attName1,...,attrNameN]
+
+    Prints the information about partition distribution.
+
+  --------------------------------------------------------------------------------
+
+  --cache reset_lost_partitions cacheName1,...,cacheNameN
+
+    Reset the state of lost partitions for the specified caches.
+
+
