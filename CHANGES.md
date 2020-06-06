@@ -1,9 +1,16 @@
+#### *0.6.3* @ 2020-06-06
+* added base `JavaApp` application
+* fixed console entrypoint
+* fixed `LocalPool` usage in tests
+* fixed config load plugin call
+* added latest `ControlUtility` commands for AI 2.9.0
+
 #### *0.6.2* @ 2020-06-05
 * added license banners to all sources files
 * added `after_config_loaded` hook
 * moved bin scripts under generic `tiden` entry point
-* added EnvExpander plugin
-* added FtpDownloader plugin
+* added `EnvExpander` plugin
+* added `FtpDownloader` plugin
 * merged combinator and yardstick related fixes from baseline repo
 
 #### *0.6.1* @ 2020-05-27

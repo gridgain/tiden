@@ -53,7 +53,7 @@ def check_runtests_protocol(module_name, short_name, _config=None):
 
 
 @pytest.fixture
-def local_config():
+def local_config(tmpdir):
     config = {
         'environment': {
             'server_hosts': [
@@ -65,7 +65,7 @@ def local_config():
             ],
             'username': '',
             'private_key_path': '',
-            'home': '/var/tmp/tiden/local',
+            'home': str(tmpdir.mkdir('tiden')),
         },
     }
     config['ssh'] = {
@@ -81,7 +81,7 @@ def local_config():
     config['ssh']['hosts'] = list(hosts)
     if config['environment'].get('env_vars'):
         config['ssh']['env_vars'] = config['environment']['env_vars']
-    return config
+    yield config
 
 
 @pytest.fixture
@@ -97,6 +97,28 @@ def with_dec_classpath(request):
     old_sys_path = sys.path.copy()
     old_modules = set(sys.modules.copy())
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'res', 'decorators')))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+    yield request
+    sys.path = old_sys_path.copy()
+    new_modules = set(sys.modules.copy())
+    imported_modules = new_modules - old_modules
+    for imported_module in imported_modules:
+        del sys.modules[imported_module]
+
+
+@pytest.fixture
+def with_java_app_classpath(request):
+    """
+    This fixture temporary pulls in 'tiden/tests/res/java_app' folder to Python Path, thus allowing to import modules
+    directly from resources. After test, Python Path is reverted to previous value.
+    :param request:
+    :return:
+    """
+    import sys
+    import os.path
+    old_sys_path = sys.path.copy()
+    old_modules = set(sys.modules.copy())
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'res', 'java_app')))
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
     yield request
     sys.path = old_sys_path.copy()

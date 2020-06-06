@@ -46,13 +46,13 @@ class ConnectionMode(Enum):
 def create_parser():
     # Parse command-line arguments
     parser = OptionParser(usage=SUPPRESS_USAGE, add_help_option=False)
-    parser.add_option("--ts", action='store', default=None)
-    parser.add_option("--tc", action='append', default=[])
-    parser.add_option("--var_dir", action='store', default=None)
-    parser.add_option("--to", action='append', default=[])
-    parser.add_option("--clean", action='store', default='')
-    parser.add_option("--attr", action='append', default=[])
-    parser.add_option("--collect-only", action='store_true', default=False)
+    parser.add_option("--ts", action='store', default=None, help='Test suite name')
+    parser.add_option("--tc", action='append', default=[], help='Test config file name(s)')
+    parser.add_option("--var_dir", action='store', default=None, help='Local scratch directory')
+    parser.add_option("--to", action='append', default=[], help='Test option(s)')
+    parser.add_option("--clean", action='store', default='', help='Clean option')
+    parser.add_option("--attr", action='append', default=[], help='Test filtering attributes')
+    parser.add_option("--collect-only", action='store_true', default=False, help='Only collect tests, do not run')
     return parser
 
 
@@ -74,7 +74,7 @@ def process_args():
         'xunit_file': 'xunit.xml',
         'artifacts_hash': 'artifacts_hash.yaml'
     }
-    parser = get_option_parser()
+    parser = create_parser()
     options, args = parser.parse_args()
     collect_only = options.collect_only
 
@@ -290,13 +290,15 @@ def main():
     # parse arguments,
     # load configuration,
     # initialize working directories
-    config = TidenFabric().setConfig(setup_test_environment(process_args())).obj
+    pm = PluginManager(process_args())
+    config = TidenFabric().setConfig(setup_test_environment(pm.do_filter('after_config_loaded', pm.config)[0])).obj
+    # pm.config = config
+    # pm.set(config=config)
+    pm = PluginManager(config)
     log_print('The configuration stored in %s' % config['config_path'])
 
     logger = _get_default_logger(config)
     sys.path.insert(0, abspath(getcwd()))
-
-    pm = PluginManager(config)
 
     # prepare artifacts, artifact information is updated into config
     # this must be done before tests collections,

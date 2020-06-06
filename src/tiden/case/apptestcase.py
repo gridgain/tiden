@@ -16,12 +16,11 @@
 
 from ..apps.appscontainer import AppsContainer
 from ..apps.app import App
-from ..tidenexception import TidenException
 from ..util import unix_path
 from os.path import isfile
 from glob import glob
 from ..tidenfabric import TidenFabric
-from copy import deepcopy
+
 from ..sshpool import AbstractSshPool
 
 
@@ -58,7 +57,8 @@ class AppTestCase:
         for file in glob(f"{resources_dir}/*"):
             if isfile(file):
                 files.append(unix_path(file))
-        self.tiden.ssh.upload(files, self.tiden.config['rt']['remote']['test_module_dir'])
+        if files:
+            self.tiden.ssh.upload(files, self.tiden.config['rt']['remote']['test_module_dir'])
 
     def util_exec_on_all_hosts(self, ignite, commands_to_exec):
         commands = {}
