@@ -76,6 +76,7 @@ def test_runner_collect(with_dec_classpath, local_config, tmpdir, mock_pm):
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     test_module_source_file_name = '%s/%s/%s.py' % (config['suite_dir'], suite, source)
 
     modules = {
@@ -95,7 +96,6 @@ def test_runner_collect(with_dec_classpath, local_config, tmpdir, mock_pm):
 
     from tiden.tidenfabric import TidenFabric
     TidenFabric().reset().setConfig(config)
-
     tr = TidenRunner(config, modules=modules, ssh_pool=ssh_pool, plugin_manager=mock_pm, xunit_path=xunit_file_collect)
     tr.collect_tests()
     res = tr.get_tests_results()
@@ -148,6 +148,7 @@ def test_runner_basic(with_dec_classpath, local_config, tmpdir, mock_pm):
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     test_module_source_file_name = '%s/%s/%s.py' % (config['suite_dir'], suite, module_short_name)
 
     modules = {
@@ -277,6 +278,7 @@ def test_runner_handle_exception_in_module_setup(with_dec_classpath, local_confi
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_exceptions_in_setup': {
             'path': '%s/mock3/mock_test_module_with_exceptions_in_setup.py' % config['suite_dir'],
@@ -319,6 +321,7 @@ def test_runner_handle_general_exception_in_module_setup(with_dec_classpath, loc
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_exceptions_in_setup': {
             'path': '%s/mock3/mock_test_module_with_exceptions_in_setup.py' % config['suite_dir'],
@@ -360,6 +363,7 @@ def test_runner_handle_exceptions_in_module_teardown(with_dec_classpath, local_c
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
 
     for class_name in ['mock_test_module_with_generic_exceptions_in_teardown',
                        'mock_test_module_with_tiden_exceptions_in_teardown']:
@@ -411,6 +415,7 @@ def test_runner_repeated_decorator(with_dec_classpath, local_config, tmpdir, moc
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_decorators': {
             'path': '%s/mock3/mock_test_module_with_decorators.py' % config['suite_dir'],
@@ -524,6 +529,7 @@ def test_runner_repeated_test_option_all(with_dec_classpath, local_config, tmpdi
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_decorators': {
             'path': '%s/mock3/mock_test_module_with_decorators.py' % config['suite_dir'],
@@ -655,6 +661,7 @@ def test_runner_repeated_test_option_particular_test(with_dec_classpath, local_c
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_decorators': {
             'path': '%s/mock3/mock_test_module_with_decorators.py' % config['suite_dir'],
@@ -770,6 +777,7 @@ def test_runner_repeated_test_continue_on_fail(with_dec_classpath, local_config,
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock3.mock_test_module_with_decorators': {
             'path': '%s/mock3/mock_test_module_with_decorators.py' % config['suite_dir'],
@@ -912,6 +920,7 @@ def test_runner_skipped_configurations(with_dec_classpath, local_config, tmpdir,
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     test_module_source_file_name = '%s/%s/%s.py' % (config['suite_dir'], suite, source)
 
     modules = {
@@ -1034,6 +1043,7 @@ def test_runner_run_negated_required_test_when_no_option_passed(with_dec_classpa
     })
 
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     test_module_source_file_name = '%s/%s/%s.py' % (config['suite_dir'], suite, source)
 
     modules = {

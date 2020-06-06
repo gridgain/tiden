@@ -28,7 +28,7 @@ def test_local_pool_exec_on_host_rm_one_file(local_config):
     with open(file_path, 'w') as f:
         f.close()
 
-    pool.exec_on_host(host, ["rm -rf %s/test" % local_config['environment']['home']])
+    pool.exec_on_host(host, ["rm -rf %s/test" % local_config['environment']['home']], )
     assert not os.path.exists(file_path)
 
 
@@ -45,7 +45,7 @@ def test_local_pool_exec_on_host_rm_files_by_mask(local_config):
     with open(file2_path, 'w') as f:
         f.close()
 
-    pool.exec_on_host(host, ["rm -rf %s/*" % local_config['environment']['home']])
+    pool.exec_on_host(host, ["rm -rf %s/*" % local_config['environment']['home']], )
     assert not os.path.exists(file1_path)
     assert not os.path.exists(file2_path)
 

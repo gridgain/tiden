@@ -74,6 +74,7 @@ def test_priority_decorator_run_tests(with_dec_classpath, local_config, tmpdir, 
         }
     })
     ssh_pool = LocalPool(local_config['ssh'])
+    ssh_pool.connect()
     modules = {
         'mock2.mock_test_module_with_test_priorities': {
             'path': join(config['suite_dir'], 'mock2', 'mock_test_module_with_test_priorities.py'),

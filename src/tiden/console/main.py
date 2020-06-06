@@ -28,7 +28,7 @@ allowed_commands = {
 }
 
 
-def usage(self_name):
+def usage(self_name, allowed_commands):
     print('Usage: ' + self_name + ' <command> <args> <options>')
     print('')
     print('Where <command> is one of:')
@@ -58,12 +58,12 @@ def main():
         allowed_commands.update(entry_points)
 
     if len(sys.argv) <= 1:
-        usage(basename(sys.argv[0]))
+        usage(basename(sys.argv[0]), allowed_commands)
         sys.exit(0)
 
     cmd = sys.argv[1]
     if cmd not in allowed_commands:
-        usage(basename(sys.argv[0]))
+        usage(basename(sys.argv[0]), allowed_commands)
         sys.exit(1)
 
     args = sys.argv[1:]

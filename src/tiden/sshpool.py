@@ -69,6 +69,23 @@ class AbstractSshPool:
     def killall(self, name, sig=-9, skip_reserved_java_processes=True, hosts=None):
         raise NotImplementedError
 
+    def exec_at_nodes(self, nodes, func: lambda node_id, node: str):
+        """
+        Execute per-node command at hosts
+        :param nodes: dictionary node_idx -> node
+        :param func: per-node command generation function
+        :return: dictionary node_idx -> output of command
+        """
+        nodes_hosts = list(set([node['host'] for node in nodes.values()]))
+        host_nodes = {host: [node_idx for node_idx, node in nodes.items() if node['host'] == host] for host in
+                      nodes_hosts}
+        commands = {host: [func(node_idx, nodes[node_idx]) for node_idx in host_nodes[host]] for host in
+                    nodes_hosts}
+        output = self.exec(commands)
+        node_output = {node_idx: host_nodes[node['host']].index(node_idx) for node_idx, node in nodes.items()}
+        result = {node_idx: output[node['host']][node_output[node_idx]] for node_idx, node in nodes.items()}
+        return result
+
 
 class SshPool(AbstractSshPool):
     default_timeout = 400
@@ -210,7 +227,7 @@ class SshPool(AbstractSshPool):
 
     def exec(self, commands, **kwargs):
         """
-        :param commands: the list of commands to execute for hosts
+        :param commands: the list of commands to execute for hosts or dict of list of commands indexed by host
         :return: the list of lines
         """
         from functools import partial

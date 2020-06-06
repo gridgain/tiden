@@ -55,6 +55,26 @@ def test_env_expander_no_replace():
     check_env_expander(input_config, {}, input_config)
 
 
+def test_env_expander_ignore_vars():
+    input_config = {
+        'environment': {
+            'env_vars': {
+                'JAVA_HOME': '$JDK_ORA_18',
+                'PATH': '$JDK_ORA_18/bin; $PATH',
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'ignore_vars': [
+                    'JDK_ORA_18',
+                    'PATH'
+                ]
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
+
 def test_env_expander_simple_replace():
     input_config = {
         'attr_match': '${ATTR_MATCH}',

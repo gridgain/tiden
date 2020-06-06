@@ -85,7 +85,7 @@ class LocalPool(SshPool):
                 copy2(remote_path, local_path)
         return {}
 
-    def exec_on_host(self, host, commands):
+    def exec_on_host(self, host, commands, **kwargs):
         if debug_local_pool:
             print("%s: exec_on_host(%s, %s)" % (
                 LocalPool._now(),
@@ -154,7 +154,7 @@ class LocalPool(SshPool):
                 # something wrong with process, it might have died, skip it
                 continue
             cwd = cwd[first_host][0]
-            cmdline = self.exec_on_host(first_host, ['cat /proc/%d/cmdline | tr "\\0" " "' % (proc_pid+1)])
+            cmdline = self.exec_on_host(first_host, ['cat /proc/%d/cmdline | tr "\\0" " "' % (proc_pid + 1)])
             if len(cmdline) == 0 or first_host not in cmdline.keys() or len(cmdline[first_host]) == 0:
                 # something wrong with process, it might have died, skip it
                 continue
