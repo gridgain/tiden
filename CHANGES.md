@@ -6,6 +6,7 @@
 * added latest `ControlUtility` commands for AI 2.9.0
 * `download_from_host` now supports lists of remote files and map of files to hosts
 * added `download_from_nodes`
+* add module/class cache to `TidenRunner` to prevent double importing due to `check_requirements`
 
 #### *0.6.2* @ 2020-06-05
 * added license banners to all sources files

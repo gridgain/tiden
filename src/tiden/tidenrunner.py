@@ -107,8 +107,8 @@ class TidenRunner:
     # test method name only
     current_test_method = None
 
-    test_module_cache = {}
-    test_class_cache = {}
+    test_module_cache = None
+    test_class_cache = None
 
     def __init__(self, config, **kwargs):
         if kwargs.get('modules', None) is not None:
@@ -127,6 +127,9 @@ class TidenRunner:
 
         self.ssh_pool: SshPool = kwargs.get('ssh_pool')
         self.pm: PluginManager = kwargs.get('plugin_manager')
+
+        self.test_module_cache = {}
+        self.test_class_cache = {}
 
     def collect_tests(self):
         """
@@ -153,7 +156,7 @@ class TidenRunner:
 
             test_method_names = sorted(list(self.gen_tests(self.test_class)))
 
-            self.create_test_module_attr_yaml(test_method_names)
+            # self.create_test_module_attr_yaml(test_method_names)
             self.collect_tests0(test_method_names)
 
             self.total.update(self.test_plan[test_module])
