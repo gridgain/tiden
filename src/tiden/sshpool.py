@@ -26,6 +26,7 @@ from .util import log_print, log_put, log_add, get_logger
 from os import path
 from .tidenexception import RemoteOperationTimeout,TidenException
 from random import choice
+from itertools import chain
 
 
 class AbstractSshPool:
@@ -86,6 +87,28 @@ class AbstractSshPool:
         result = {node_idx: output[node['host']][node_output[node_idx]] for node_idx, node in nodes.items()}
         return result
 
+    def download_from_nodes(self, nodes, files, local_path):
+        nodes_hosts = list(set([node['host'] for node in nodes.values()]))
+        host_nodes = {host: [node_idx for node_idx, node in nodes.items() if node['host'] == host] for host in
+                      nodes_hosts}
+        remote_paths = {host: list(chain(*[files[node_idx] for node_idx in host_nodes[host] if node_idx in files])) for host in
+                 nodes_hosts}
+        return self.download(remote_paths, local_path)
+
+    def ls(self, hosts=None, dir_path=None, params=None):
+        ls_cmd = 'ls' if not params else 'ls {}'.format(params)
+        ls_command = ['{}'.format(ls_cmd)] if not dir_path else ['{} {}'.format(ls_cmd, dir_path)]
+
+        if hosts:
+            ls_command = {host: ls_command for host in hosts}
+
+        raw_results = self.exec(ls_command)
+        results = {}
+        for host in raw_results.keys():
+            results[host] = (raw_results[host][0] if len(raw_results[host]) > 0 else '').rstrip().splitlines()
+
+        return results
+
 
 class SshPool(AbstractSshPool):
     default_timeout = 400
@@ -125,8 +148,11 @@ class SshPool(AbstractSshPool):
         to_gb = lambda x: int(int(x) / 1048576)
         results = self.exec(['df -l'])
         for host in results.keys():
+            if host not in results or len(results[host]) == 0:
+                problem_hosts.add(f"Can't get available space at host {host}")
+                continue
             lines = results[host][0]
-            for line in lines.split('\n'):
+            for line in lines.rstrip().splitlines():
                 storage_items = split('\s+', line)
                 if len(storage_items) == 6:
                     match = search('^[0-9]+$', storage_items[3])
@@ -197,31 +223,39 @@ class SshPool(AbstractSshPool):
                         log_print(str(e), 2)
                         exit(1)
 
-    def download(self, remote_path, local_path, prepend_host=True):
+    def download(self, remote_paths, local_path, prepend_host=True):
         files_for_hosts = []
         for host in self.hosts:
             file = local_path
             if path.isdir(file):
-                if prepend_host is True:
-                    file = "%s/%s%s" % (file, host, path.basename(remote_path))
-                else:
-                    file = "%s/%s" % (file, path.basename(remote_path))
+                if type(remote_paths) != type([]):
+                    remote_paths = [remote_paths]
+                _remote_paths = []
+                for remote_path in remote_paths:
+                    if prepend_host is True:
+                        file = "%s/%s%s" % (file, host, path.basename(remote_path))
+                    else:
+                        file = "%s/%s" % (file, path.basename(remote_path))
+                    _remote_paths.append(remote_path)
                 files_for_hosts.append(
-                    [host, remote_path, file]
+                    [host, _remote_paths, file]
                 )
             else:
                 files_for_hosts.append(
-                    [host, remote_path, file]
+                    [host, remote_paths, file]
                 )
         pool = ThreadPool(self.threads_num)
         pool.starmap(self.download_from_host, files_for_hosts)
         pool.close()
         pool.join()
 
-    def download_from_host(self, host, remote_path, local_path):
+    def download_from_host(self, host, remote_paths, local_path):
         try:
-            sftp = self.clients.get(host).open_sftp()
-            sftp.get(remote_path, local_path)
+            if type(remote_paths) != type([]):
+                remote_paths = [remote_paths]
+            for remote_path in remote_paths:
+                sftp = self.clients.get(host).open_sftp()
+                sftp.get(remote_path, local_path)
         except SSHException as e:
             print(str(e))
 
@@ -362,20 +396,6 @@ class SshPool(AbstractSshPool):
                 m = search('^([0-9\w]+)\s+([0-9]+)', line)
                 if m:
                     results.append({'host': host, 'owner': m.group(1), 'pid': m.group(2)})
-        return results
-
-    def ls(self, hosts=None, dir_path=None, params=None):
-        ls_cmd = 'ls' if not params else 'ls {}'.format(params)
-        ls_command = ['{}'.format(ls_cmd)] if not dir_path else ['{} {}'.format(ls_cmd, dir_path)]
-
-        if hosts:
-            ls_command = {host: ls_command for host in hosts}
-
-        raw_results = self.exec(ls_command)
-        results = {}
-        for host in raw_results.keys():
-            results[host] = raw_results[host][0].split('\n')
-
         return results
 
     def jps(self, jps_args=None, hosts=None, skip_reserved_java_processes=True):

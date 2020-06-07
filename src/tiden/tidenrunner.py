@@ -551,7 +551,7 @@ class TidenRunner:
                     with Step(self, host_ip):
                         for line in output_lines:
                             file_name: str
-                            for file_name in line.split('\n'):
+                            for file_name in line.rstrip().splitlines():
                                 if file_name and file_name.endswith('.log'):
                                     send_file_name = f'{uuid4()}_{file_name}'
                                     add_attachment(self, file_name, send_file_name, AttachmentType.FILE)

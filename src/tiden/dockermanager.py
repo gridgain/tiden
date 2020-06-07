@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from os.path import basename
+from os.path import basename, join
 from pprint import PrettyPrinter
 from re import match
 from uuid import uuid4
@@ -541,7 +541,7 @@ class DockerManager:
             if add_manager_init_com is None:
                 self.swarm_manager = host
                 swarm_init_res = self.ssh.exec_on_host(host, [init_cmd])
-                clear_res = [line.strip() for line in swarm_init_res[host][0].split('\n')]
+                clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
                 assert [line for line in clear_res if 'Swarm initialized' in line],\
                     'Failed to initialize swarm on {}: {}'.format(host, ' '.join(clear_res))
                 add_manager_init_com = [line for line in clear_res if line.startswith('docker')]

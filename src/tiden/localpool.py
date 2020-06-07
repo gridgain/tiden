@@ -71,18 +71,21 @@ class LocalPool(SshPool):
             # print(local_file, remote_path)
             copy2(local_file, remote_path)
 
-    def download_from_host(self, host, remote_path, local_path):
+    def download_from_host(self, host, remote_paths, local_path):
         if debug_local_pool:
             print("%s: download_from_host(%s, %s, %s)" % (
                 LocalPool._now(),
                 host,
-                remote_path,
+                remote_paths,
                 local_path,
             ))
             host_home = path.join(self.home, host)
-            if self.home in remote_path:
-                remote_path = remote_path.replace(self.home, host_home)
-                copy2(remote_path, local_path)
+            if type(remote_paths) != type([]):
+                remote_paths = [remote_paths]
+            for remote_path in remote_paths:
+                if self.home in remote_path:
+                    remote_path = remote_path.replace(self.home, host_home)
+                    copy2(remote_path, local_path)
         return {}
 
     def exec_on_host(self, host, commands, **kwargs):
@@ -108,14 +111,9 @@ class LocalPool(SshPool):
                     command = command.replace(self.home, host_home)
                 get_logger('tiden').debug('%s >> %s' % (host, command))
 
-                proc_args = ['/usr/bin/env']
-                proc_args.extend(command.split(" "))
-
                 stdout = subprocess.check_output(
                     command,
                     shell=True,
-                    # args=proc_args,
-                    # executable=proc_args[0],
                     env=env,
                     cwd=host_home,
                     timeout=timeout,
@@ -124,8 +122,13 @@ class LocalPool(SshPool):
 
                 output.append(stdout) #.strip())
                 get_logger('tiden').debug('<< %s' % output)
+            except subprocess.CalledProcessError as e:
+                out = e.output.decode('utf-8')
+                rc = e.returncode
+                get_logger('tiden').error(f'rc: {rc}, e: {e}')
+                get_logger('tiden').debug(f'<< {out}')
             except Exception as e:
-                get_logger('tiden').error("%s" % e)
+                get_logger('tiden').error(f'{e}')
 
         return {host: output}
 

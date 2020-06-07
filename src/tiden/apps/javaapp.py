@@ -29,7 +29,6 @@ class JavaApp(App):
     class_name = ''
     start_timeout = 5
 
-    test_dir = None
     java_app_jar = None
     java_app_home = None
 
@@ -60,10 +59,9 @@ class JavaApp(App):
 
     def rotate_node_log(self, node_idx):
         run_counter = 0 if 'run_counter' not in self.nodes[node_idx] else self.nodes[node_idx]['run_counter'] + 1
-        self.test_dir = self.config['rt']['remote']['test_dir']
         self.nodes[node_idx].update({
             'run_counter': run_counter,
-            'log': "%s/%s" % (self.test_dir, "node.%d.%s.%d.log" % (node_idx, self.name, run_counter)),
+            'log': "%s/%s" % (self.remote_test_dir, "node.%d.%s.%d.log" % (node_idx, self.name, run_counter)),
         })
 
     def _print_wait_for(self, message, node_idxs, time, timeout, done):
@@ -146,9 +144,12 @@ class JavaApp(App):
         log_print(f"Start {self.name.title()} node(s): {nodes_to_start}")
         result = self.ssh.exec(start_command)
         for node_idx, node in self.nodes.items():
-            host = node['host']
-            node['pid'] = int(result[host][pids[node_idx]].strip())
-            if not node['pid']:
+            try:
+                host = node['host']
+                node['pid'] = int(result[host][pids[node_idx]].strip())
+                if not node['pid']:
+                    raise ValueError(f'no pid for node {node_idx}')
+            except ValueError or IndexError or KeyError  as e:
                 raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
         check_command = {}
         status = {}
@@ -160,10 +161,12 @@ class JavaApp(App):
             status[node_idx] = len(check_command[host]) - 1
         result = self.ssh.exec(check_command)
         for node_idx, node in self.nodes.items():
-            host = node['host']
-            if not result[host][status[node_idx]]:
-                raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
-            node['status'] = NodeStatus.STARTED
+            try:
+                host = node['host']
+                if result[host][status[node_idx]]:
+                    node['status'] = NodeStatus.STARTED
+            except IndexError or ValueError or KeyError as e:
+                raise TidenException(f"Can't check {self.name.title()} node {node_idx} started at host {host}")
             log_print(f"{self.name.title()} node {node_idx} started on {host} with PID {node['pid']}")
 
     def start_node(self, node_idx):
@@ -186,7 +189,7 @@ class JavaApp(App):
 
     def get_node_check_commands(self, node_idx):
         return [
-            'sleep 1; pid -p %d -f | grep java 2>/dev/null' % self.nodes[node_idx]['pid'],
+            'sleep 1; ps -p %d -f | grep java 2>/dev/null' % self.nodes[node_idx]['pid'],
         ]
 
     def get_node_start_commands(self, node_idx):

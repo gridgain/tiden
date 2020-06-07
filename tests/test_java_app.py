@@ -14,8 +14,211 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .conftest import check_runtests_protocol
 from os.path import join, dirname
+from itertools import chain
+
+
+def test_download_files():
+    def _get_files(nodes, files):
+        nodes_hosts = list(set([node['host'] for node in nodes.values()]))
+        host_nodes = {host: [node_idx for node_idx, node in nodes.items() if node['host'] == host] for host in
+                      nodes_hosts}
+        result = {host: list(chain(*[files[node_idx] for node_idx in host_nodes[host] if node_idx in files])) for host in
+                 nodes_hosts}
+        return result
+
+    nodes = {
+        0: {
+            'host': '127.0.1.1',
+        },
+    }
+    files = {
+        0: [
+            'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+        ],
+    }
+
+    assert {
+        '127.0.1.1': [
+            'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+        ],
+    } == _get_files(nodes, files)
+
+    nodes = {
+        0: {
+            'host': '127.0.1.1',
+        },
+        1: {
+            'host': '127.0.1.1',
+        },
+    }
+    files = {
+        0: [
+            'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+        ],
+        1: [
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz',
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.1.log.tar.gz',
+        ],
+    }
+    assert {
+        '127.0.1.1': [
+            'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz',
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.1.log.tar.gz',
+        ],
+    } == _get_files(nodes, files)
+
+    nodes = {
+        0: {
+            'host': '127.0.1.1',
+        },
+        1: {
+            'host': '127.0.1.2',
+        },
+    }
+    assert {
+        '127.0.1.1': [
+            'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+        ],
+        '127.0.1.2': [
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz',
+            'httploadscenario-20200607075522036/1-20200607075522036-simulation.1.log.tar.gz',
+        ],
+    } == _get_files(nodes, files)
+
+    files = {
+        # 0: [
+        # ],
+        1: [
+            'httploadscenario-20200607075522037/1-20200607075522037-simulation.log.tar.gz',
+        ],
+    }
+
+    assert {
+        '127.0.1.1': [
+        ],
+        '127.0.1.2': [
+            'httploadscenario-20200607075522037/1-20200607075522037-simulation.log.tar.gz',
+        ],
+    } == _get_files(nodes, files)
+
+
+def test_group_results():
+    def _get_scenario_files(results):
+        from copy import deepcopy
+
+        scenario_files = {}
+        all_data = {
+            node_id: node_data.rstrip().splitlines() for node_id, node_data in results.items()
+        }
+        if not all_data:
+            return {}
+        scenario_count = 0
+        scenario_names = {}
+        scenario_data = {}
+        for node_id, node_data in all_data.items():
+            node_scenario_dirnames = {}
+            for filepath in node_data:
+                if '/' not in filepath:
+                    continue
+                dir_name, filename = filepath.split('/')
+                if dir_name not in node_scenario_dirnames.keys():
+                    node_scenario_dirnames[dir_name] = []
+                node_scenario_dirnames[dir_name].append(dir_name + '/' + filename)
+            node_scenario_count = len(node_scenario_dirnames)
+            if scenario_count < node_scenario_count:
+                scenario_count = node_scenario_count
+            for scenario_n, dir_name in enumerate(node_scenario_dirnames):
+                if scenario_n not in scenario_names:
+                    scenario_names[scenario_n] = []
+                scenario_names[scenario_n].append(dir_name)
+                if scenario_n not in scenario_data:
+                    scenario_data[scenario_n] = {}
+                scenario_data[scenario_n][node_id] = node_scenario_dirnames[dir_name].copy()
+
+        for scenario_n, scenario_node_names in scenario_names.items():
+            min_timestamp = None
+            scenario_name = None
+            for scenario_node_name in scenario_node_names:
+                if '-' not in scenario_node_name:
+                    continue
+                node_scenario_name, node_timestamp = scenario_node_name.split('-')
+                if scenario_name is None:
+                    scenario_name = node_scenario_name
+                else:
+                    if scenario_name != node_scenario_name:
+                        continue
+                if min_timestamp is None:
+                    min_timestamp = node_timestamp
+                else:
+                    if int(min_timestamp) > int(node_timestamp):
+                        min_timestamp = node_timestamp
+            if scenario_name is None:
+                continue
+            scenario_name = scenario_name + '-' + min_timestamp
+            scenario_files[scenario_name] = deepcopy(scenario_data[scenario_n])
+
+        return scenario_files
+
+    results = {
+        0: '\n',
+        1: '',
+    }
+    assert {} == _get_scenario_files(results)
+
+    results = {
+        0: 'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz\n',
+    }
+    assert {
+        'httploadscenario-20200607075522036': {
+            0: [
+                'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+            ],
+        }
+    } == _get_scenario_files(results)
+
+    results = {
+    }
+    assert {} == _get_scenario_files(results)
+
+    results = {
+        0: 'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz\n',
+        1: 'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz\nhttploadscenario-20200607075522036/1-20200607075522036-simulation.1.log.tar.gz\n',
+    }
+    assert {
+        'httploadscenario-20200607075522036': {
+            0: [
+                'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+            ],
+            1: [
+                'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz',
+                'httploadscenario-20200607075522036/1-20200607075522036-simulation.1.log.tar.gz',
+            ],
+        },
+    } == _get_scenario_files(results)
+
+    results = {
+        0: 'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz\n',
+        1: 'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz\nhttploadscenario-20200607075522037/1-20200607075522037-simulation.log.tar.gz\n',
+    }
+    assert {
+        'httploadscenario-20200607075522036': {
+            0: [
+                'httploadscenario-20200607075522036/0-20200607075522036-simulation.log.tar.gz',
+            ],
+            1: [
+                'httploadscenario-20200607075522036/1-20200607075522036-simulation.log.tar.gz',
+            ],
+        },
+        'httploadscenario-20200607075522037': {
+            # 0: [
+            # ],
+            1: [
+                'httploadscenario-20200607075522037/1-20200607075522037-simulation.log.tar.gz',
+            ],
+        },
+    } == _get_scenario_files(results)
 
 
 def test_wrap_exec():
