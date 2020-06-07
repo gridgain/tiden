@@ -146,9 +146,9 @@ class JavaApp(App):
         for node_idx, node in self.nodes.items():
             try:
                 host = node['host']
-                node['pid'] = int(result[host][pids[node_idx]].strip())
-                if not node['pid']:
-                    raise ValueError(f'no pid for node {node_idx}')
+                node['PID'] = int(result[host][pids[node_idx]].strip())
+                if not node['PID']:
+                    raise ValueError(f'no PID for node {node_idx}')
             except ValueError or IndexError or KeyError  as e:
                 raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
         check_command = {}
@@ -167,7 +167,7 @@ class JavaApp(App):
                     node['status'] = NodeStatus.STARTED
             except IndexError or ValueError or KeyError as e:
                 raise TidenException(f"Can't check {self.name.title()} node {node_idx} started at host {host}")
-            log_print(f"{self.name.title()} node {node_idx} started on {host} with PID {node['pid']}")
+            log_print(f"{self.name.title()} node {node_idx} started on {host} with PID {node['PID']}")
 
     def start_node(self, node_idx):
         self.rotate_node_log(node_idx)
@@ -178,18 +178,18 @@ class JavaApp(App):
         node['status'] = NodeStatus.STARTING
         log_print(f"Start {self.name.title()} node(s): {[node_idx]}")
         result = self.ssh.exec(start_command)
-        node['pid'] = int(result[host][len(start_commands) - 1].strip())
+        node['PID'] = int(result[host][len(start_commands) - 1].strip())
         check_commands = self.get_node_check_commands(node_idx)
         check_command = {host: check_commands}
         result = self.ssh.exec(check_command)
         if not result[host][0]:
             raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
         node['status'] = NodeStatus.STARTED
-        log_print(f"{self.name.title()} node {node_idx} started on {host} with PID {node['pid']}")
+        log_print(f"{self.name.title()} node {node_idx} started on {host} with PID {node['PID']}")
 
     def get_node_check_commands(self, node_idx):
         return [
-            'sleep 1; ps -p %d -f | grep java 2>/dev/null' % self.nodes[node_idx]['pid'],
+            'sleep 1; ps -p %d -f | grep java 2>/dev/null' % self.nodes[node_idx]['PID'],
         ]
 
     def get_node_start_commands(self, node_idx):
