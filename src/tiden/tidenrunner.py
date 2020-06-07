@@ -132,7 +132,7 @@ class TidenRunner:
         log_print("*** Collecting tests ***", color='blue')
         long_path_len = get_long_path_len(self.modules)
 
-        from tiden.sshpool import AbstractSshPool
+        from .abstractsshpool import AbstractSshPool
         self.ssh_pool = AbstractSshPool({'hosts': []})
 
         def empty_init(self, config, ssh_pool):

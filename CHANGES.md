@@ -4,7 +4,7 @@
 * fixed `LocalPool` usage in tests
 * fixed config load plugin call
 * added latest `ControlUtility` commands for AI 2.9.0
-* `download_from_host` now supports lists of remote files
+* `download_from_host` now supports lists of remote files and map of files to hosts
 * added `download_from_nodes`
 
 #### *0.6.2* @ 2020-06-05

@@ -21,7 +21,7 @@ from os.path import isfile
 from glob import glob
 from ..tidenfabric import TidenFabric
 
-from ..sshpool import AbstractSshPool
+from ..abstractsshpool import AbstractSshPool
 
 
 class AppTestCaseContext:
