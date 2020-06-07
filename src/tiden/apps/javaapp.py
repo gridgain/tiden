@@ -33,8 +33,11 @@ class JavaApp(App):
     java_app_jar = None
     java_app_home = None
 
+    app_mode = 'client'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.app_mode = kwargs['app_mode'] if 'app_mode' in kwargs and kwargs['app_mode'] else self.__class__.app_mode
         self.start_timeout = self.__class__.start_timeout
         self.jvm_options = self.__class__.default_jvm_options.copy()
         self.class_name = self.__class__.class_name
@@ -42,31 +45,32 @@ class JavaApp(App):
     def setup(self):
         super().setup()
         self.java_app_jar = self.config['artifacts'][self.name]['remote_path']
-        self.java_app_home = "%s/%s" % (self.config['rt']['remote']['test_module_dir'], self.name)
-        self.add_nodes()
+        self.java_app_home = f"{self.remote_test_module_dir}/{self.name}"
+        self.add_nodes(mode=self.app_mode)
 
-    def add_nodes(self):
-        for host in self.get_hosts():
-            for node_idx in range(0, self.get_servers_per_host()):
+    def add_nodes(self, mode='client'):
+        for host in self.get_hosts(mode=mode):
+            for node_idx in range(0, self.get_nodes_per_host(mode=mode)):
                 self.add_node(host)
 
-    def add_node(self, host=None):
+    def add_node(self, host=None, mode='client'):
         node_idx = len(self.nodes)
         self.nodes[node_idx] = {
             'host': host,
             'status': NodeStatus.NEW,
-            'run_dir': "%s/%s" % (self.java_app_home, "server.%d" % node_idx)
+            'run_dir': f"{self.java_app_home}/{mode}.{node_idx}"
         }
 
     def rotate_node_log(self, node_idx):
         run_counter = 0 if 'run_counter' not in self.nodes[node_idx] else self.nodes[node_idx]['run_counter'] + 1
         self.nodes[node_idx].update({
             'run_counter': run_counter,
-            'log': "%s/%s" % (self.remote_test_dir, "node.%d.%s.%d.log" % (node_idx, self.name, run_counter)),
+            'log': f"{self.remote_test_dir}/node.{node_idx}.{self.name}.{run_counter}.log",
         })
 
     def _print_wait_for(self, message, node_idxs, time, timeout, done):
-        log_put(f"Waiting for '{message}' at nodes [{', '.join([str(node_id) for node_id in node_idxs])}], {time}/{timeout} sec")
+        nodes_str = ', '.join([str(node_id) for node_id in node_idxs])
+        log_put(f"Waiting for '{message}' at nodes [{nodes_str}], {time}/{timeout} sec")
         if done:
             stdout.flush()
             log_print('')
@@ -212,20 +216,5 @@ class JavaApp(App):
     def get_node_args(self, node_idx):
         return ''
 
-    def get_servers_per_host(self):
-        if self.name in self.config['environment']:
-            return int(self.config['environment'][self.name].get(f'{self.get_app_type()}s_per_host', 1))
-        else:
-            return int(self.config['environment'].get(f'{self.get_app_type()}s_per_host', 1))
-
     def check_requirements(self):
         self.require_artifact(self.name)
-
-    def get_app_type(self):
-        return 'client'
-
-    def get_hosts(self):
-        if self.name in self.config['environment']:
-            return self.config['environment'][self.name].get(f'{self.get_app_type()}_hosts', [])
-        else:
-            return self.config['environment'].get(f'{self.get_app_type()}_hosts', [])
