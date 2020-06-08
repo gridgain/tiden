@@ -58,14 +58,14 @@ class JavaApp(App):
         self.nodes[node_idx] = {
             'host': host,
             'status': NodeStatus.NEW,
-            'run_dir': f"{self.java_app_home}/{mode}.{node_idx}"
+            'run_dir': f"{self.java_app_home}/{self.name}.{mode}.{node_idx}"
         }
 
     def rotate_node_log(self, node_idx):
         run_counter = 0 if 'run_counter' not in self.nodes[node_idx] else self.nodes[node_idx]['run_counter'] + 1
         self.nodes[node_idx].update({
             'run_counter': run_counter,
-            'log': f"{self.remote_test_dir}/node.{node_idx}.{self.name}.{run_counter}.log",
+            'log': f"{self.remote_test_dir}/{self.name}.node.{node_idx}.{run_counter}.log",
         })
 
     def _print_wait_for(self, message, node_idxs, time, timeout, done):
@@ -155,7 +155,7 @@ class JavaApp(App):
                 if not node['PID']:
                     raise ValueError(f'no PID for node {node_idx}')
             except ValueError or IndexError or KeyError  as e:
-                raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
+                raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {node['host']}")
         check_command = {}
         status = {}
         for node_idx, node in self.nodes.items():

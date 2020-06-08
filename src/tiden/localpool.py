@@ -71,22 +71,25 @@ class LocalPool(SshPool):
             # print(local_file, remote_path)
             copy2(local_file, remote_path)
 
-    def download_from_host(self, host, remote_paths, local_path):
+    def download_from_host(self, host, remote_paths, local_paths):
         if debug_local_pool:
             print("%s: download_from_host(%s, %s, %s)" % (
                 LocalPool._now(),
                 host,
                 remote_paths,
-                local_path,
+                local_paths,
             ))
-            host_home = path.join(self.home, host)
-            if type(remote_paths) != type([]):
-                remote_paths = [remote_paths]
-            for remote_path in remote_paths:
-                if self.home in remote_path:
-                    remote_path = remote_path.replace(self.home, host_home)
-                    copy2(remote_path, local_path)
-        return {}
+        host_home = path.join(self.home, host)
+        if type(remote_paths) != type([]):
+            remote_paths = [remote_paths]
+            local_paths = [local_paths]
+        result = []
+        for i, remote_path in enumerate(remote_paths):
+            if self.home in remote_path:
+                remote_path = remote_path.replace(self.home, host_home)
+                copy2(remote_path, local_paths[i])
+                result.append(local_paths[i])
+        return result
 
     def exec_on_host(self, host, commands, **kwargs):
         if debug_local_pool:

@@ -16,6 +16,9 @@
 
 from itertools import chain
 from random import choice
+from .util import log_print
+
+debug_abstract_pool = False
 
 
 class AbstractSshPool:
@@ -81,15 +84,22 @@ class AbstractSshPool:
         return result
 
     def download_from_nodes(self, nodes, files, local_path, prepend_host=True):
+        if debug_abstract_pool:
+            log_print('download_from_nodes: \nnodes: ' +
+                      repr(nodes) + '\nfiles: ' + repr(files) + '\nlocal_path: ' + local_path)
         nodes_hosts = list(set([node['host'] for node in nodes.values()]))
         host_nodes = {
             host: [node_idx for node_idx, node in nodes.items() if node['host'] == host]
             for host in nodes_hosts
         }
         remote_paths = {
-            host: list(chain(*[files[node_idx] for node_idx in host_nodes[host] if node_idx in files]))
+            host: list(chain(*[[nodes[node_idx]['run_dir'] + '/' + file for file in files[node_idx]]
+                               for node_idx in host_nodes[host] if node_idx in files]))
             for host in nodes_hosts
         }
+        if debug_abstract_pool:
+            log_print('download_from_nodes: \nnodes_hosts: ' +
+                      repr(nodes_hosts) + '\nhost_nodes: ' + repr(host_nodes) + '\nremote_paths: ' + repr(remote_paths))
         return self.download(remote_paths, local_path, prepend_host=prepend_host)
 
     def ls(self, hosts=None, dir_path=None, params=None):
