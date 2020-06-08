@@ -1,10 +1,11 @@
-#### *0.6.3* @ 2020-06-06
+#### *0.6.3* @ 2020-06-08
 * added base `JavaApp` application
 * fixed console entrypoint
 * fixed `LocalPool` usage in tests
 * fixed config load plugin call
 * added latest `ControlUtility` commands for AI 2.9.0
-* `download_from_host` now supports lists of remote files and map of files to hosts
+* `download_from_host` now supports lists of remote files or map of host -> files
+* `download` now returns list of downloaded local filepaths 
 * added `download_from_nodes`
 * add module/class cache to `TidenRunner` to prevent double importing due to `check_requirements`
 
