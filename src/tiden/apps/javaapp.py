@@ -44,7 +44,7 @@ class JavaApp(App):
 
     def setup(self):
         super().setup()
-        self.java_app_jar = self.config['artifacts'][self.name]['remote_path']
+        self.java_app_jar = self.config['artifacts'][self.app_type]['remote_path']
         self.java_app_home = f"{self.remote_test_module_dir}/{self.name}"
         self.add_nodes(mode=self.app_mode)
 
@@ -149,13 +149,13 @@ class JavaApp(App):
         log_print(f"Start {self.name.title()} node(s): {nodes_to_start}")
         result = self.ssh.exec(start_command)
         for node_idx, node in self.nodes.items():
+            host = node['host']
             try:
-                host = node['host']
                 node['PID'] = int(result[host][pids[node_idx]].strip())
                 if not node['PID']:
                     raise ValueError(f'no PID for node {node_idx}')
             except ValueError or IndexError or KeyError  as e:
-                raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {node['host']}")
+                raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
         check_command = {}
         status = {}
         for node_idx, node in self.nodes.items():
@@ -166,8 +166,8 @@ class JavaApp(App):
             status[node_idx] = len(check_command[host]) - 1
         result = self.ssh.exec(check_command)
         for node_idx, node in self.nodes.items():
+            host = node['host']
             try:
-                host = node['host']
                 if result[host][status[node_idx]]:
                     node['status'] = NodeStatus.STARTED
             except IndexError or ValueError or KeyError as e:
