@@ -335,10 +335,10 @@ class TidenRunner:
                 self.test_class = getattr(module, self.test_class_name)(self.config, self.ssh_pool)
                 self.test_class_cache[self.test_class_name] = self.test_class
 
-            if hasattr(self.test_class, 'tiden'):
-                if config_module:
-                    self.__copy_resources_to_local_test_module_directory()
+            if config_module:
+                self.__copy_resources_to_local_test_module_directory()
 
+            if hasattr(self.test_class, 'tiden'):
                 # Set ssh and config apps model classes
                 self.test_class.tiden.config = self.config
                 self.test_class.tiden.ssh = self.ssh_pool
@@ -589,13 +589,22 @@ class TidenRunner:
         Copy resources in test resource directory
         :return:
         """
-        test_resource_dir = "%s/res" % self.config['rt']['test_module_dir']
+        if hasattr(self.test_class, 'get_resource_dir'):
+            test_resource_dir = getattr(self.test_class, 'get_resource_dir')()
+        else:
+            test_resource_dir = f"{self.config['rt']['test_module_dir']}/res"
+
         if not path.exists(test_resource_dir):
             mkdir(test_resource_dir)
-            self.config['rt']['resource_dir'] = "%s/res/%s" % (self.config['suite_dir'], self.module_short_name[5:])
-            for file in glob("%s/*" % self.config['rt']['resource_dir']):
-                if path.isfile(file):
-                    copyfile(file, f"{test_resource_dir}/{basename(file)}")
+            if hasattr(self.test_class, 'get_source_resource_dirs'):
+                source_resource_dirs = getattr(self.test_class, 'get_source_resource_dirs')()
+            else:
+                source_resource_dirs = [f"{self.config['suite_dir']}/res/{self.module_short_name[5:]}"]
+            self.config['rt']['resource_dir'] = source_resource_dirs.copy()
+            for source_resource_dir in source_resource_dirs:
+                for file in glob(f"{source_resource_dir}/*"):
+                    if path.isfile(file):
+                        copyfile(file, f"{test_resource_dir}/{basename(file)}")
         self.config['rt']['test_resource_dir'] = unix_path(test_resource_dir)
 
     def __create_test_module_directory(self, remote_test_module_dir, test_module_dir):

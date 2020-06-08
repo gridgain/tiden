@@ -33,25 +33,6 @@ class GeneralTestCase:
         # configuration file variables
         self.contexts = {'default': IgniteTestContext(self.config)}
 
-        if config.get('rt'):
-            self.config['rt']['resource_dir'] = self.get_source_resource_dir()
-            # Copy resources in test resource directory
-            test_resource_dir = self.get_resource_dir()
-            if not path.exists(test_resource_dir):
-                mkdir(test_resource_dir)
-
-                res_dirs = [self.config['rt']['resource_dir']]
-                if isinstance(self.config['rt']['resource_dir'], list):
-                    res_dirs = self.config['rt']['resource_dir']
-
-                for res_dir in res_dirs:
-                    for file in glob("%s/*" % res_dir):
-                        if path.isfile(file):
-                            copyfile(file, "%s/%s" % (test_resource_dir, path.basename(file)))
-
-            self.config['rt']['test_resource_dir'] = unix_path(test_resource_dir)
-            write_yaml_file(config['config_path'], config)
-
     def get_resource_dir(self):
         """
         return path to var resources directory. defaults to <suite_var_dir>/<test_module>/res
@@ -59,7 +40,7 @@ class GeneralTestCase:
         """
         return "%s/res" % self.config['rt']['test_module_dir']
 
-    def get_source_resource_dir(self):
+    def get_source_resource_dirs(self):
         """
         return path to source suite resources directory. defaults to suites/<suite>/res/<module>
         :return:
