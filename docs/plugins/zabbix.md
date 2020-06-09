@@ -10,7 +10,7 @@ Example configuration
 ```
 plugins:
   Zabbix:
-    url: 'https://<zabbix_url/'
+    url: 'https://<zabbix_url>/'
     login: '<login>'
     password: '<password>'
     metrics:
