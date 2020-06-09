@@ -10,8 +10,8 @@ Example configuration
 ```
 plugins:
   Zabbix:
-    url: 'https://ggmon.gridgain.com/'
-    login: 'ggqa'
+    url: 'https://<zabbix_url/'
+    login: '<login>'
     password: '<password>'
     metrics:
       - 'Available memory'
