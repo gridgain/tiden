@@ -18,56 +18,17 @@ from hashlib import md5
 from multiprocessing.dummy import Pool as ThreadPool
 from time import sleep
 
-from paramiko import AutoAddPolicy, SSHClient, SSHException
+from paramiko import AutoAddPolicy, SSHClient, SSHException, SFTPClient
 from paramiko.buffered_pipe import PipeTimeout
 import socket
 from re import search, split
+
+from .abstractsshpool import AbstractSshPool
 from .util import log_print, log_put, log_add, get_logger
 from os import path
 from .tidenexception import RemoteOperationTimeout,TidenException
-from random import choice
 
-
-class AbstractSshPool:
-    def __init__(self, ssh_config=None, **kwargs):
-        self.config = ssh_config if ssh_config is not None else {}
-        self.hosts = self.config.get('hosts', [])
-
-    def get_random_host(self):
-        return choice(self.hosts)
-
-    def trace_info(self):
-        raise NotImplementedError
-
-    def available_space(self):
-        raise NotImplementedError
-
-    def connect(self):
-        raise NotImplementedError
-
-    def download(self, remote_path, local_path, prepend_host=True):
-        raise NotImplementedError
-
-    def exec(self, commands, **kwargs):
-        raise NotImplementedError
-
-    def exec_on_host(self, host, commands, **kwargs):
-        raise NotImplementedError
-
-    def jps(self, jps_args=None, hosts=None, skip_reserved_java_processes=True):
-        raise NotImplementedError
-
-    def dirsize(self, dir_path, *args):
-        raise NotImplementedError
-
-    def upload(self, files, remote_path):
-        raise NotImplementedError
-
-    def not_uploaded(self, files, remote_path):
-        raise NotImplementedError
-
-    def killall(self, name, sig=-9, skip_reserved_java_processes=True, hosts=None):
-        raise NotImplementedError
+debug_ssh_pool = False
 
 
 class SshPool(AbstractSshPool):
@@ -108,8 +69,11 @@ class SshPool(AbstractSshPool):
         to_gb = lambda x: int(int(x) / 1048576)
         results = self.exec(['df -l'])
         for host in results.keys():
+            if host not in results or len(results[host]) == 0:
+                problem_hosts.add(f"Can't get available space at host {host}")
+                continue
             lines = results[host][0]
-            for line in lines.split('\n'):
+            for line in lines.rstrip().splitlines():
                 storage_items = split('\s+', line)
                 if len(storage_items) == 6:
                     match = search('^[0-9]+$', storage_items[3])
@@ -168,49 +132,82 @@ class SshPool(AbstractSshPool):
                     log_add('T ', 3)
                     if attempt == self.retries:
                         log_print('', 2)
-                        log_print("Error: connection timeout to host %s\n" % host, color='red')
+                        log_print("ERROR: connection timeout to host %s\n" % host, color='red')
                         log_print("%s\n" % str(e))
                         exit(1)
                 except SSHException as e:
                     log_add('E ', 3)
                     if attempt == self.retries:
                         log_print('', 2)
-                        log_print("Error: SSH error for host=%s, username=%s, key=%s" %
+                        log_print("ERROR: SSH error for host=%s, username=%s, key=%s" %
                                   (host, str(self.username), str(self.private_key_path)), 2, color='red')
                         log_print(str(e), 2)
                         exit(1)
 
-    def download(self, remote_path, local_path, prepend_host=True):
+    def download(self, remote_paths, local_path, prepend_host=True):
+        if debug_ssh_pool:
+            log_print('download: \nremote_paths:' + repr(remote_paths) + '\nlocal_paths: ' + repr(local_path))
         files_for_hosts = []
+        if type(remote_paths) != type({}):
+            remote_paths = {host: remote_paths for host in self.hosts}
         for host in self.hosts:
-            file = local_path
-            if path.isdir(file):
-                if prepend_host is True:
-                    file = "%s/%s%s" % (file, host, path.basename(remote_path))
-                else:
-                    file = "%s/%s" % (file, path.basename(remote_path))
+            if host not in remote_paths.keys():
+                continue
+            host_remote_paths = remote_paths[host]
+            if type(host_remote_paths) != type([]):
+                host_remote_paths = [host_remote_paths]
+            if path.isdir(local_path):
+                _rem_arr = []
+                _loc_arr = []
+                for remote_path in host_remote_paths:
+                    file = local_path
+                    if prepend_host is True:
+                        file = "%s/%s%s" % (file, host, path.basename(remote_path))
+                    else:
+                        file = "%s/%s" % (file, path.basename(remote_path))
+                    _rem_arr.append(remote_path)
+                    _loc_arr.append(file)
                 files_for_hosts.append(
-                    [host, remote_path, file]
+                    [host, _rem_arr.copy(), _loc_arr.copy()]
                 )
             else:
+                if len(host_remote_paths) > 1:
+                    raise TidenException("When downloading many files, local_path must be a directory! \n"
+                                         "remote_paths: " + repr(host_remote_paths) + '\n' +
+                                         'local_path: ' + str(local_path))
                 files_for_hosts.append(
-                    [host, remote_path, file]
+                    [host, host_remote_paths, [local_path]]
                 )
         pool = ThreadPool(self.threads_num)
-        pool.starmap(self.download_from_host, files_for_hosts)
+        raw_results = pool.starmap(self.download_from_host, files_for_hosts)
+        results = []
+        for raw_result in raw_results:
+            results.extend(raw_result)
         pool.close()
         pool.join()
+        return results
 
-    def download_from_host(self, host, remote_path, local_path):
+    def download_from_host(self, host, remote_paths, local_paths):
+        if debug_ssh_pool:
+            log_print('download_from_host: \nhost: ' + repr(host) +
+                      '\nremote_paths:' + repr(remote_paths) + '\nlocal_paths: ' + repr(local_paths))
+        result = []
         try:
-            sftp = self.clients.get(host).open_sftp()
-            sftp.get(remote_path, local_path)
+            if type(remote_paths) != type([]):
+                remote_paths = [remote_paths]
+                local_paths = [local_paths]
+            ssh_client: SSHClient = self.clients.get(host)
+            sftp: SFTPClient = ssh_client.open_sftp()
+            for i, remote_path in enumerate(remote_paths):
+                sftp.get(remote_path, local_paths[i])
+                result.append(local_paths[i])
         except SSHException as e:
-            print(str(e))
+            log_print('WARN: can\'t download file(s) from host ' + str(repr(remote_paths)) + ', ' + str(e), color='red')
+        return result
 
     def exec(self, commands, **kwargs):
         """
-        :param commands: the list of commands to execute for hosts
+        :param commands: the list of commands to execute for hosts or dict of list of commands indexed by host
         :return: the list of lines
         """
         from functools import partial
@@ -345,20 +342,6 @@ class SshPool(AbstractSshPool):
                 m = search('^([0-9\w]+)\s+([0-9]+)', line)
                 if m:
                     results.append({'host': host, 'owner': m.group(1), 'pid': m.group(2)})
-        return results
-
-    def ls(self, hosts=None, dir_path=None, params=None):
-        ls_cmd = 'ls' if not params else 'ls {}'.format(params)
-        ls_command = ['{}'.format(ls_cmd)] if not dir_path else ['{} {}'.format(ls_cmd, dir_path)]
-
-        if hosts:
-            ls_command = {host: ls_command for host in hosts}
-
-        raw_results = self.exec(ls_command)
-        results = {}
-        for host in raw_results.keys():
-            results[host] = raw_results[host][0].split('\n')
-
         return results
 
     def jps(self, jps_args=None, hosts=None, skip_reserved_java_processes=True):

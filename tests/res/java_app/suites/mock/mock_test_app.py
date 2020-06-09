@@ -14,21 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .nodestatus import NodeStatus
-from .app import App
-from .appconfigbuilder import AppConfigBuilder
-from .appexception import AppException, MissedRequirementException
-from .appscontainer import AppsContainer
-from .appfactory import AppFactory
-from .javaapp import JavaApp
+from tiden.case import AppTestCase
+from tiden.apps import JavaApp
+from time import sleep
 
-__all__ = [
-    "App",
-    "AppConfigBuilder",
-    "AppException",
-    "AppFactory",
-    "AppsContainer",
-    "JavaApp",
-    "MissedRequirementException",
-    "NodeStatus",
-]
+
+class MockTestApp(AppTestCase):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.add_app('mockapp')
+
+    def test_wait_message(self):
+        app: JavaApp = self.get_app('mockapp')
+        for node_idx in app.nodes.keys():
+            app.rotate_node_log(node_idx)
+        self.tiden.ssh.exec_at_nodes(app.nodes, lambda node_idx, node: f"echo 'Message' > {node['log']}")
+        sleep(1)
+        assert app.wait_message("Message")
+        assert not app.wait_message('Absent', timeout=3)

@@ -1,4 +1,4 @@
-# Tiden 0.6.2
+# Tiden 0.6.3
 
 ## 1. What is Tiden?
 

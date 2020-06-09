@@ -16,7 +16,7 @@
 
 from .app import App
 from .appfactory import AppFactory
-
+from .appexception import AppException
 
 class AppsContainer:
     def __init__(self):
@@ -38,6 +38,8 @@ class AppsContainer:
         return sorted(self.apps.keys())
 
     def get_app(self, app_name):
+        if app_name not in self.apps:
+            raise AppException("Application '{app_name.title()}' is not yet created! Don't call .get_app in __init__!")
         return self.apps[app_name]
 
     def get_app_options(self, app_name):
@@ -69,6 +71,9 @@ class AppsContainer:
         for app in self.apps.keys():
             if self.apps[app].app_type == app_type:
                 apps.append(self.apps[app])
+        if not apps:
+            raise AppException(
+                "No application of type '{app_type}' are yet created! Don't call .get_app_by_type in __init__!")
         return apps
 
     def setup_configured_apps(self, config, ssh_pool):

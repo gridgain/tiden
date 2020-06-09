@@ -22,6 +22,8 @@ from ..apps.ignite.igniteexception import IgniteException
 from ..report.steps import step
 from ..tidenexception import TidenException
 from ..util import print_red, log_print, log_put, version_num
+from ..logger import get_logger
+from ..assertions import *
 
 
 class ControlUtility:
@@ -208,13 +210,21 @@ class ControlUtility:
             'set baseline autoadjustment': 'baseline_autoadjustment',
             'set baseline': 'baseline_set',
             'cluster baseline topology': 'baseline_print',
-            'cluster state': 'state',
             'ist or kill transactions': 'tx',
             'about specific transaction': 'tx_info',
             'caches': 'view_caches',
-            'view diagnostic': 'diagnostic',
+            'view diagnostic': 'view_diagnostic',
             'change cluster tag': 'change_tag',
-            # TODO: DR help requires additional parsing
+            'change cluster state': 'set_state',
+            'print current cluster state': 'state',
+            'kill compute task': 'kill_compute_task',
+            'kill service': 'kill_service',
+            'kill sql query': 'kill_sql_query',
+            'kill continuous query': 'kill_continuous_query',
+            'kill scan query': 'kill_scan_query',
+            'kill transaction by xid': 'kill_tx',
+            'print the current master key name': 'print_master_key',
+            'change the master key': 'change_master_key',
         }
         for help_string, help_data in parsed_help.items():
             found = False

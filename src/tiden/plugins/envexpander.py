@@ -30,6 +30,7 @@ class EnvExpander(TidenPlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.ignore_vars = self.options.get('ignore_vars', [])
         self.expand_var_names = self.options.get('expand_vars', [])
         if type(self.expand_var_names) == type(''):
             self.expand_var_names = [self.expand_var_names]
@@ -93,6 +94,8 @@ class EnvExpander(TidenPlugin):
                 if not m:
                     continue
                 var = m.group(1)
+                if var in self.ignore_vars:
+                    continue
                 if var not in env:
                     self.missing_vars.add(var)
                 else:

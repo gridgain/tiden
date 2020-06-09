@@ -14,21 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .nodestatus import NodeStatus
-from .app import App
-from .appconfigbuilder import AppConfigBuilder
-from .appexception import AppException, MissedRequirementException
-from .appscontainer import AppsContainer
-from .appfactory import AppFactory
-from .javaapp import JavaApp
 
-__all__ = [
-    "App",
-    "AppConfigBuilder",
-    "AppException",
-    "AppFactory",
-    "AppsContainer",
-    "JavaApp",
-    "MissedRequirementException",
-    "NodeStatus",
-]
+from copy import deepcopy
+from tiden.apps.javaapp import JavaApp
+
+
+class Mockapp(JavaApp):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+

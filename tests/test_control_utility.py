@@ -90,6 +90,31 @@ help_2_5_8_and_higher = {
             'view caches information in a cluster. for more details type': 'view_caches',
         }
 
+help_2_9_0_and_higher = {
+            'activate cluster (deprecated. use --set-state instead)': 'activate',
+            'deactivate cluster (deprecated. use --set-state instead)': 'deactivate',
+            'change cluster state': 'set_state',
+            'change the master key': 'change_master_key',
+            'print the current master key name': 'print_master_key',
+            'kill service by name': 'kill_service',
+            'kill compute task by session id': 'kill_compute_task',
+            'kill sql query by query id': 'kill_sql_query',
+            'kill continuous query by routine id': 'kill_continuous_query',
+            'kill scan query by node id, cache name and query id': 'kill_scan_query',
+            'kill transaction by xid': 'kill_tx',
+            'print current cluster state': 'state',
+            'print cluster baseline topology': 'baseline_print',
+            'add nodes into baseline topology': 'baseline_add',
+            'remove nodes from baseline topology': 'baseline_remove',
+            'set baseline topology': 'baseline_set',
+            'set baseline topology based on version': 'baseline_version',
+            'set baseline autoadjustment settings': 'baseline_autoadjustment',
+            'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
+            'print detailed information (topology and key lock ownership) about specific transaction': 'tx_info',
+            'view caches information in a cluster. for more details type': 'view_caches',
+            'view diagnostic information in a cluster. for more details type': 'view_diagnostic',
+        }
+
 commands_2_5_1_and_higher_with_force = {
             'activate': '',
             'deactivate': '--force',
@@ -134,6 +159,31 @@ commands_2_5_8_and_higher_with_yes = {
             # 'tx_list': '',
             # 'tx_kill': '--force',
             'view_caches': '',
+}
+
+commands_2_9_0_and_higher = {
+            'activate': '',
+            'deactivate': '--yes',
+            'state': '',
+            'set_state': '--yes',
+            'baseline_print': '',
+            'baseline_add': '--yes',
+            'baseline_remove': '--yes',
+            'baseline_set': '--yes',
+            'baseline_version': '--yes',
+            'baseline_autoadjustment': '--yes',
+            'tx': '--yes',
+            'tx_info': '',
+            'view_caches': '',
+            'view_diagnostic': '',
+            'kill_sql_query': '',
+            'kill_scan_query': '',
+            'kill_continuous_query': '',
+            'kill_compute_task': '',
+            'kill_service': '',
+            'print_master_key': '',
+            'change_master_key': '',
+            'kill_tx': '',
 }
 
 testdata = [
@@ -205,10 +255,15 @@ testdata = [
         'help': help_2_5_8_and_higher,
         'commands': commands_2_5_8_and_higher_with_yes,
     },
+    {
+        'ignite_version': '2.9.0',
+        'help': help_2_9_0_and_higher,
+        'commands': commands_2_9_0_and_higher,
+    },
 ]
 
-@pytest.mark.parametrize('data', testdata, ids=[test['ignite_version'] for test in testdata])
 
+@pytest.mark.parametrize('data', testdata, ids=[test['ignite_version'] for test in testdata])
 def test_parse_help(data):
     class MockIgnite:
         name = 'ignite'
@@ -244,5 +299,5 @@ def test_parse_help(data):
         assert set(data['commands'].keys()) == set(commands.keys()), "Commands matched"
 
         for command, use_force in data['commands'].items():
-            assert use_force == commands[command]['force'], "Force argument matches"
+            assert use_force == commands[command]['force'], f"Force {command} argument matches"
 

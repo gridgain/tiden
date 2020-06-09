@@ -27,7 +27,7 @@ class App:
     config_builder = None
     nodes = {}
     config = None
-    ssh = None
+    ssh: SshPool = None
     name = ''
     app_type = ''
     artifact_name = ''
@@ -230,3 +230,35 @@ class App:
             if node_filter == '*' or node_idx in node_filter:
                 self.nodes[node_idx].update({opt_name: opt_value})
 
+    def get_remote_test_dir(self):
+        if 'rt' not in self.config or 'remote' not in self.config['rt']:
+            raise AppException("Test remote directory not available until test is not started")
+        return self.config['rt']['remote']['test_dir']
+
+    remote_test_dir = property(get_remote_test_dir, None)
+
+    def get_test_dir(self):
+        if 'rt' not in self.config:
+            raise AppException("Test directory not available until test is not started")
+        return self.config['rt']['test_dir']
+
+    test_dir = property(get_test_dir, None)
+
+    def get_remote_test_module_dir(self):
+        if 'rt' not in self.config or 'remote' not in self.config['rt']:
+            raise AppException("Test module remote directory not available until test is not started")
+        return self.config['rt']['remote']['test_module_dir']
+
+    remote_test_module_dir = property(get_remote_test_module_dir, None)
+
+    def get_nodes_per_host(self, mode='client'):
+        if self.app_type in self.config['environment']:
+            return int(self.config['environment'][self.app_type].get(f'{mode}s_per_host', 1))
+        else:
+            return int(self.config['environment'].get(f'{mode}s_per_host', 1))
+
+    def get_hosts(self, mode='client'):
+        if self.app_type in self.config['environment']:
+            return self.config['environment'][self.app_type].get(f'{mode}_hosts', [])
+        else:
+            return self.config['environment'].get(f'{mode}_hosts', [])

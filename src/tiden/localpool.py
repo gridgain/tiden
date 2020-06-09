@@ -71,21 +71,27 @@ class LocalPool(SshPool):
             # print(local_file, remote_path)
             copy2(local_file, remote_path)
 
-    def download_from_host(self, host, remote_path, local_path):
+    def download_from_host(self, host, remote_paths, local_paths):
         if debug_local_pool:
             print("%s: download_from_host(%s, %s, %s)" % (
                 LocalPool._now(),
                 host,
-                remote_path,
-                local_path,
+                remote_paths,
+                local_paths,
             ))
-            host_home = path.join(self.home, host)
+        host_home = path.join(self.home, host)
+        if type(remote_paths) != type([]):
+            remote_paths = [remote_paths]
+            local_paths = [local_paths]
+        result = []
+        for i, remote_path in enumerate(remote_paths):
             if self.home in remote_path:
                 remote_path = remote_path.replace(self.home, host_home)
-                copy2(remote_path, local_path)
-        return {}
+                copy2(remote_path, local_paths[i])
+                result.append(local_paths[i])
+        return result
 
-    def exec_on_host(self, host, commands):
+    def exec_on_host(self, host, commands, **kwargs):
         if debug_local_pool:
             print("%s: exec_on_host(%s, %s)" % (
                 LocalPool._now(),
@@ -108,14 +114,9 @@ class LocalPool(SshPool):
                     command = command.replace(self.home, host_home)
                 get_logger('tiden').debug('%s >> %s' % (host, command))
 
-                proc_args = ['/usr/bin/env']
-                proc_args.extend(command.split(" "))
-
                 stdout = subprocess.check_output(
                     command,
                     shell=True,
-                    # args=proc_args,
-                    # executable=proc_args[0],
                     env=env,
                     cwd=host_home,
                     timeout=timeout,
@@ -124,8 +125,13 @@ class LocalPool(SshPool):
 
                 output.append(stdout) #.strip())
                 get_logger('tiden').debug('<< %s' % output)
+            except subprocess.CalledProcessError as e:
+                out = e.output.decode('utf-8')
+                rc = e.returncode
+                get_logger('tiden').error(f'rc: {rc}, e: {e}')
+                get_logger('tiden').debug(f'<< {out}')
             except Exception as e:
-                get_logger('tiden').error("%s" % e)
+                get_logger('tiden').error(f'{e}')
 
         return {host: output}
 
@@ -154,7 +160,7 @@ class LocalPool(SshPool):
                 # something wrong with process, it might have died, skip it
                 continue
             cwd = cwd[first_host][0]
-            cmdline = self.exec_on_host(first_host, ['cat /proc/%d/cmdline | tr "\\0" " "' % (proc_pid+1)])
+            cmdline = self.exec_on_host(first_host, ['cat /proc/%d/cmdline | tr "\\0" " "' % (proc_pid + 1)])
             if len(cmdline) == 0 or first_host not in cmdline.keys() or len(cmdline[first_host]) == 0:
                 # something wrong with process, it might have died, skip it
                 continue

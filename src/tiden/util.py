@@ -1386,3 +1386,53 @@ def mergedict(source, destination):
             destination[key] = value
 
     return destination
+
+
+def local_run(proc, args, env, cwd, timeout):
+    from sys import platform
+    from os import environ
+    import subprocess
+    from .tidenexception import TidenException
+    if 'win32' not in platform:
+        if '/' not in proc:
+            proc_args = ['/usr/bin/env', proc]
+        else:
+            proc_args = [proc]
+    else:
+        # Hope caller provide FULL PATH to executable
+        proc_args = [proc]
+
+    proc_args.extend([str(v) for v in args])
+    sub_env = environ.copy()
+    sub_env.update(env)
+
+    output = ''
+    try:
+        output = subprocess.check_output(
+            args=proc_args,
+            executable=proc_args[0],
+            env=sub_env,
+            cwd=cwd,
+            timeout=timeout,
+            stderr=subprocess.STDOUT
+        ).decode('utf-8')
+        rc = 0
+        rc_str = ''
+    except subprocess.CalledProcessError as e:
+        rc = e.returncode
+        rc_str = str(e)
+        output = e.output.decode('utf-8')
+    except OSError as e:
+        rc = e.errno
+        rc_str = e.strerror
+    except subprocess.TimeoutExpired as t:
+        rc = -1
+        rc_str = str(t)
+    except BaseException as e:
+        rc = -2
+        rc_str = 'Unhandled exception : ' + str(e)
+
+    if rc != 0:
+        raise TidenException(f'Error {rc} running \'{proc_args}\': {rc_str}\n{output}')
+
+    return output

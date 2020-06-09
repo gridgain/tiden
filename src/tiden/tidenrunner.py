@@ -107,6 +107,9 @@ class TidenRunner:
     # test method name only
     current_test_method = None
 
+    test_module_cache = None
+    test_class_cache = None
+
     def __init__(self, config, **kwargs):
         if kwargs.get('modules', None) is not None:
             self.modules = kwargs.get('modules')
@@ -125,6 +128,9 @@ class TidenRunner:
         self.ssh_pool: SshPool = kwargs.get('ssh_pool')
         self.pm: PluginManager = kwargs.get('plugin_manager')
 
+        self.test_module_cache = {}
+        self.test_class_cache = {}
+
     def collect_tests(self):
         """
         Collect tests from all modules.
@@ -132,7 +138,7 @@ class TidenRunner:
         log_print("*** Collecting tests ***", color='blue')
         long_path_len = get_long_path_len(self.modules)
 
-        from tiden.sshpool import AbstractSshPool
+        from .abstractsshpool import AbstractSshPool
         self.ssh_pool = AbstractSshPool({'hosts': []})
 
         def empty_init(self, config, ssh_pool):
@@ -150,7 +156,7 @@ class TidenRunner:
 
             test_method_names = sorted(list(self.gen_tests(self.test_class)))
 
-            self.create_test_module_attr_yaml(test_method_names)
+            # self.create_test_module_attr_yaml(test_method_names)
             self.collect_tests0(test_method_names)
 
             self.total.update(self.test_plan[test_module])
@@ -189,11 +195,9 @@ class TidenRunner:
 
         # Check requirements for applications
         for test_module in sorted(self.modules.keys()):
-            module = import_module("suites.%s" % test_module)
-            test_class_name = get_class_from_module(self.modules[test_module]['module_short_name'])
-            test_class = getattr(module, test_class_name)(self.config, self.ssh_pool)
-            if hasattr(test_class, 'check_requirements'):
-                test_class.check_requirements()
+            self.__prepare_module_vars(test_module, config_module=False)
+            if hasattr(self.test_class, 'check_requirements'):
+                getattr(self.test_class, 'check_requirements')()
 
         for test_module in sorted(self.modules.keys()):
             # cleanup instance vars
@@ -263,7 +267,7 @@ class TidenRunner:
         self.test_plan = {}
         self.total = TidenTestPlan()
 
-    def __prepare_module_vars(self, module_name, fake_init=None):
+    def __prepare_module_vars(self, module_name, fake_init=None, config_module=True):
         """
         Prepare per-module initialization of internal variables:
 
@@ -290,24 +294,30 @@ class TidenRunner:
 
         # fill new module vars
         self.module_short_name = self.modules[self.test_module]['module_short_name']
-        test_module_dir = "%s/%s" % (self.config['suite_var_dir'], self.module_short_name)
-        remote_test_module_dir = "%s/%s" % (self.config['remote']['suite_var_dir'], self.module_short_name)
 
         self.test_class_name = get_class_from_module(self.module_short_name)
 
         # Update Tiden config
-        self.config['rt'] = {
-            'test_class': self.test_class_name,
-            'test_method': None,
-            'test_module': self.test_module,
-            'test_module_name': self.module_short_name,
-            'test_module_dir': test_module_dir,
-            'remote': {
-                'test_module_dir': remote_test_module_dir,
-            }
-        }
+        if config_module:
+            test_module_dir = "%s/%s" % (self.config['suite_var_dir'], self.module_short_name)
+            remote_test_module_dir = "%s/%s" % (self.config['remote']['suite_var_dir'], self.module_short_name)
 
-        module = import_module("suites.%s" % self.test_module)
+            self.config['rt'] = {
+                'test_class': self.test_class_name,
+                'test_method': None,
+                'test_module': self.test_module,
+                'test_module_name': self.module_short_name,
+                'test_module_dir': test_module_dir,
+                'remote': {
+                    'test_module_dir': remote_test_module_dir,
+                }
+            }
+
+        if self.test_module in self.test_module_cache:
+            module = self.test_module_cache[self.test_module]
+        else:
+            module = import_module("suites.%s" % self.test_module)
+            self.test_module_cache[self.test_module] = module
 
         # used for collect_only
         if fake_init:
@@ -315,14 +325,20 @@ class TidenRunner:
             self.test_class.__init__ = fake_init
             self.test_class = getattr(module, self.test_class_name)(self.config, self.ssh_pool)
         else:
-            # for process tests - prepare test directory and resources
-            self.__create_test_module_directory(remote_test_module_dir, test_module_dir)
+            if config_module:
+                # for process tests - prepare test directory and resources
+                self.__create_test_module_directory(remote_test_module_dir, test_module_dir)
 
-            self.test_class = getattr(module, self.test_class_name)(self.config, self.ssh_pool)
+            if self.test_class_name in self.test_class_cache:
+                self.test_class = self.test_class_cache[self.test_class_name]
+            else:
+                self.test_class = getattr(module, self.test_class_name)(self.config, self.ssh_pool)
+                self.test_class_cache[self.test_class_name] = self.test_class
 
-            if hasattr(self.test_class, 'tiden'):
+            if config_module:
                 self.__copy_resources_to_local_test_module_directory()
 
+            if hasattr(self.test_class, 'tiden'):
                 # Set ssh and config apps model classes
                 self.test_class.tiden.config = self.config
                 self.test_class.tiden.ssh = self.ssh_pool
@@ -330,7 +346,8 @@ class TidenRunner:
             self.test_class.config = self.config
             self.test_class.ssh = self.ssh_pool
 
-            self._save_config()
+            if config_module:
+                self._save_config()
 
     def __prepare_test_vars(self, test_method_name=None, configuration=None, cfg_options=None, **kwargs):
         if not test_method_name:
@@ -512,12 +529,15 @@ class TidenRunner:
                                                exec_time(started),
                                                known_issue_str(known_issue)),
                           color='red')
+            run_info = None
+            if hasattr(self.test_class, 'get_run_info'):
+                run_info = getattr(self.test_class, 'get_run_info')()
             self.result.stop_testcase(
                 test_status,
                 e=test_exception,
                 tb=tb_msg,
                 known_issue=known_issue,
-                run_info=self.test_class.get_run_info() if hasattr(self.test_class, 'get_run_info') else None
+                run_info=run_info
             )
 
             # Execute test teardown method
@@ -551,7 +571,7 @@ class TidenRunner:
                     with Step(self, host_ip):
                         for line in output_lines:
                             file_name: str
-                            for file_name in line.split('\n'):
+                            for file_name in line.rstrip().splitlines():
                                 if file_name and file_name.endswith('.log'):
                                     send_file_name = f'{uuid4()}_{file_name}'
                                     add_attachment(self, file_name, send_file_name, AttachmentType.FILE)
@@ -569,13 +589,22 @@ class TidenRunner:
         Copy resources in test resource directory
         :return:
         """
-        test_resource_dir = "%s/res" % self.config['rt']['test_module_dir']
+        if hasattr(self.test_class, 'get_resource_dir'):
+            test_resource_dir = getattr(self.test_class, 'get_resource_dir')()
+        else:
+            test_resource_dir = f"{self.config['rt']['test_module_dir']}/res"
+
         if not path.exists(test_resource_dir):
             mkdir(test_resource_dir)
-            self.config['rt']['resource_dir'] = "%s/res/%s" % (self.config['suite_dir'], self.module_short_name[5:])
-            for file in glob("%s/*" % self.config['rt']['resource_dir']):
-                if path.isfile(file):
-                    copyfile(file, f"{test_resource_dir}/{basename(file)}")
+            if hasattr(self.test_class, 'get_source_resource_dirs'):
+                source_resource_dirs = getattr(self.test_class, 'get_source_resource_dirs')()
+            else:
+                source_resource_dirs = [f"{self.config['suite_dir']}/res/{self.module_short_name[5:]}"]
+            self.config['rt']['resource_dir'] = source_resource_dirs.copy()
+            for source_resource_dir in source_resource_dirs:
+                for file in glob(f"{source_resource_dir}/*"):
+                    if path.isfile(file):
+                        copyfile(file, f"{test_resource_dir}/{basename(file)}")
         self.config['rt']['test_resource_dir'] = unix_path(test_resource_dir)
 
     def __create_test_module_directory(self, remote_test_module_dir, test_module_dir):

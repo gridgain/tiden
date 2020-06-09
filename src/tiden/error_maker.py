@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from .logger import get_logger
+from .util import print_red
 
 
 class FileSystemErrorMaker:
@@ -34,8 +35,11 @@ class FileSystemErrorMaker:
         command = ['ls %s' % remote_path]
         results = self.ssh.exec_on_host(host, command)
         self.logger.debug(results)
-        files = [file_name for file_name in results[host][0].split('\n') if file_name]
-        self.logger.debug(results)
+        if host in results and len(results[host]) > 0:
+            files = [file_name for file_name in results[host][0].rstrip().splitlines() if file_name]
+        else:
+            files = []
+        self.logger.debug(files)
         return files
 
     def allocate_disc_space(self, host, remote_path, size):
