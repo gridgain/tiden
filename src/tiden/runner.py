@@ -218,8 +218,9 @@ def setup_test_environment(config):
     # Ssh
     config['ssh'].update({
         'username': config['environment']['username'],
-        'private_key_path': config['environment']['private_key_path'],
+        'private_key_path': config['environment'].get('private_key_path'),
         'home': str(config['environment']['home']),
+        'use_ssh_agent': config['environment'].get('use_ssh_agent'),
     })
 
     # Remote paths

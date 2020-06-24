@@ -1,4 +1,4 @@
-# Tiden 0.6.3
+# Tiden 0.6.4
 
 ## 1. What is Tiden?
 
@@ -265,6 +265,17 @@ The way to connect to remote hosts. Python `paramiko` is by default.
 Use `ansible` if the deployment is large.
 Use `local` to turn tiden into local testing framework, in that case all `[server|client|common]_hosts` in 
 environment configuration must start with '127.0' network.
+
+* `environment.use_ssh_agent`
+Default to `false`. Use it if with `connection_mode: paramiko` (default) to allow Tiden to use private key identities
+from running SSH agent. If set to `true`, override `environment.private_key_path` setting.
+
+Example:
+```
+    eval `ssh-agent`
+    ssh-add ~/.ssh/my_key
+    tiden run-tests --config=my_env.yaml ...
+```
 
 * `ignite`: dictionary with default options for Ignite deployments.
     * `bind_to_host: True|False`
