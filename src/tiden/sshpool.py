@@ -20,7 +20,6 @@ from time import sleep
 
 from paramiko import AutoAddPolicy, SSHClient, SSHException, SFTPClient
 from paramiko.buffered_pipe import PipeTimeout
-from paramiko.agent import Agent
 import socket
 from re import search, split
 
