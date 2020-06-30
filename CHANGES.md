@@ -1,3 +1,6 @@
+#### *0.6.4* @ 2020-06-24
+* added `use_ssh_agent` option to environment config to allow SshPool use SSH Agent
+
 #### *0.6.3* @ 2020-06-08
 * added base `JavaApp` application
 * added latest `ControlUtility` commands for AI 2.9.0

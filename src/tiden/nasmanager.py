@@ -66,6 +66,7 @@ class NasManager:
                 'default_timeout': SshPool.default_timeout,
                 'username': self.config['environment'].get('username'),
                 'private_key_path': self.config['environment'].get('private_key_path'),
+                'use_ssh_agent': self.config['environment'].get('use_ssh_agent'),
                 'home': self.share_root,
             },
         }

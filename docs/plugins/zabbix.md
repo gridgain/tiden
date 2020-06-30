@@ -10,8 +10,8 @@ Example configuration
 ```
 plugins:
   Zabbix:
-    url: 'https://<zabbix_url>/'
-    login: '<login>'
+    url: 'https://<zabbix.url>/'
+    login: '<user>'
     password: '<password>'
     metrics:
       - 'Available memory'

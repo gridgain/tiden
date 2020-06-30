@@ -26,7 +26,7 @@ from re import search, split
 from .abstractsshpool import AbstractSshPool
 from .util import log_print, log_put, log_add, get_logger
 from os import path
-from .tidenexception import RemoteOperationTimeout,TidenException
+from .tidenexception import RemoteOperationTimeout, TidenException
 
 debug_ssh_pool = False
 
@@ -42,6 +42,7 @@ class SshPool(AbstractSshPool):
         self.retries = kwargs.get('retries')
         self.username = self.config['username']
         self.private_key_path = self.config['private_key_path']
+        self.use_ssh_agent = self.config['use_ssh_agent']
         self.threads_num = self.config['threads_num']
         self.home = str(self.config['home'])
         if self.retries is None:
@@ -101,20 +102,29 @@ class SshPool(AbstractSshPool):
             log_put("Checking connection to %s ... " % host, 2)
             connected = False
             ssh = None
-            if self.private_key_path != '' and self.private_key_path is not None:
+            if self.private_key_path != '' and self.private_key_path:
                 if not path.exists(self.private_key_path):
                     raise TidenException("Private key %s not found" % self.private_key_path)
+            elif not self.use_ssh_agent:
+                raise TidenException("Either private_key_path or use_ssh_agent must be configured in the environment")
             while attempt < self.retries and not connected:
                 try:
                     attempt += 1
                     ssh = SSHClient()
                     ssh.load_system_host_keys()
                     ssh.set_missing_host_key_policy(AutoAddPolicy())
-                    ssh.connect(
-                        host,
-                        username=self.username,
-                        key_filename=self.private_key_path,
-                    )
+                    if self.use_ssh_agent:
+                        ssh.connect(
+                            host,
+                            username=self.username,
+                            allow_agent=True,
+                        )
+                    else:
+                        ssh.connect(
+                            host,
+                            username=self.username,
+                            key_filename=self.private_key_path,
+                        )
                     ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('uptime')
                     for line in ssh_stdout:
                         if 'load average' in str(line):
@@ -135,7 +145,7 @@ class SshPool(AbstractSshPool):
                         log_print("ERROR: connection timeout to host %s\n" % host, color='red')
                         log_print("%s\n" % str(e))
                         exit(1)
-                except SSHException as e:
+                except (SSHException, socket.error) as e:
                     log_add('E ', 3)
                     if attempt == self.retries:
                         log_print('', 2)
