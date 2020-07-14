@@ -15,10 +15,14 @@
 # limitations under the License.
 
 from re import search
+from sys import stdout
+from time import time, sleep
+from signal import SIGKILL, SIGTERM
 
 from .appexception import AppException, MissedRequirementException
 from .appconfigbuilder import AppConfigBuilder
 from .nodestatus import NodeStatus
+from .. import log_put, log_print
 from ..util import log_print
 from ..sshpool import SshPool
 
@@ -191,7 +195,10 @@ class App:
                     attrs[id][attr_name] = val
         return attrs
 
-    def kill_nodes(self, *args):
+    def stop_nodes(self, *args):
+        self.kill_nodes(*args, signal=SIGTERM)
+
+    def kill_nodes(self, *args, signal=SIGKILL):
         """
         Kill nodes by pid
         :param args:    the list of nodes ids
@@ -208,10 +215,10 @@ class App:
                 host = self.nodes[id]['host']
                 if self.nodes[id].get('PID'):
                     self.nodes[id]['status'] = NodeStatus.KILLING
-                    log_print(f'Kill node {id} at host {host}')
+                    log_print(f'Kill {self.name.title()} node {id} at host {host}')
                     if not cmd.get(host):
                         cmd[host] = []
-                    cmd[host].append('nohup kill -9 %s > /dev/null 2>&1' % self.nodes[id]['PID'])
+                    cmd[host].append('nohup kill -%s %s >/dev/null 2>&1' % (str(int(signal)), self.nodes[id]['PID']))
                 else:
                     log_print(f'There is no PID for node {id}: already killed')
             else:
@@ -262,3 +269,68 @@ class App:
             return self.config['environment'][self.app_type].get(f'{mode}_hosts', [])
         else:
             return self.config['environment'].get(f'{mode}_hosts', [])
+
+    def _print_wait_for(self, message, node_idxs, time, timeout, done):
+        nodes_str = ', '.join([str(node_id) for node_id in node_idxs])
+        log_put(f"Waiting for '{message}' at {self.name.title()} node(s) [{nodes_str}], {time}/{timeout} sec")
+        if done:
+            stdout.flush()
+            log_print('')
+
+    def wait_for(
+            self,
+            condition=lambda x: True,
+            action=lambda: None,
+            timeout=30,
+            interval=1,
+            progress_ticks=4,
+            progress=lambda t, done: None,
+            failed=lambda x: False,
+            success=lambda x: True
+    ):
+        start_time = time()
+        end_time = start_time + timeout
+
+        def _progress_seconds():
+            return timeout - max(0, int(end_time - time()))
+
+        i = 0
+        progress(_progress_seconds(), False)
+        try:
+            while True:
+                result = action()
+                if condition(result):
+                    return success(result)
+                elif failed is not None and failed(result):
+                    return False
+                if time() > end_time:
+                    return False
+                sleep(interval)
+                if progress and progress_ticks and i % progress_ticks == 0:
+                    progress(_progress_seconds(), False)
+                i += 1
+        finally:
+            if progress:
+                progress(_progress_seconds(), True)
+
+    def wait_message(self, message, nodes_idx=None, timeout=30, interval=2):
+        if nodes_idx is None:
+            node_idxs = self.nodes.keys()
+        elif isinstance(nodes_idx, int):
+            node_idxs = [nodes_idx]
+        else:
+            node_idxs = [int(node_idx) for node_idx in nodes_idx]
+
+        return self.wait_for(
+            action=lambda: self.grep_log(*node_idxs, message={'remote_regex': message, 'local_regex': f'({message})'}),
+            condition=lambda result: all([
+                node_id in result and
+                'message' in result[node_id] and
+                result[node_id]['message'] == message
+                for node_id in node_idxs
+            ]),
+            timeout=timeout,
+            interval=interval,
+            progress_ticks=3,
+            progress=lambda t, done: self._print_wait_for(message, node_idxs, t, timeout, done)
+        )

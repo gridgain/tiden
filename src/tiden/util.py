@@ -715,6 +715,7 @@ def apply_tiden_functions(input_string, **kwargs):
 
 def util_sleep(period):
     log_print('Sleep %d sec ...' % period, color='blue')
+    stdout.flush()
     sleep(period)
 
 

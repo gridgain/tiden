@@ -1,3 +1,8 @@
+#### *0.6.5* @ 2020-07-10
+* changed `AppTestCase.get_app_by_type` to `AppTestCase.get_apps_by_type`
+* added `AppTestCase.add_apps_by_type`
+* added `@app` iterator
+
 #### *0.6.4* @ 2020-06-24
 * added `use_ssh_agent` option to environment config to allow SshPool use SSH Agent
 

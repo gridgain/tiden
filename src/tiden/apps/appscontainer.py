@@ -18,6 +18,7 @@ from .app import App
 from .appfactory import AppFactory
 from .appexception import AppException
 
+
 class AppsContainer:
     def __init__(self):
         self.apps = {}
@@ -30,6 +31,18 @@ class AppsContainer:
         self.app_options[app] = {
             'options': options.copy()
         }
+
+    def add_apps_by_type(self, app_type, artifacts_config, app_name=lambda artf_name, artf: artf_name, **options):
+        for artifact_name, artifact in artifacts_config.items():
+            if artifact['type'] == app_type:
+                app_options = options.copy()
+                app_options.update({
+                    'artifact_name': artifact_name,
+                    'app_class_name': app_type,
+                })
+                self.app_options[app_name(artifact_name, artifact)] = {
+                    'options': app_options
+                }
 
     def get_configured_apps(self):
         return sorted(self.app_options.keys())
@@ -66,14 +79,14 @@ class AppsContainer:
         self.apps[app_name] = app
         return app
 
-    def get_app_by_type(self, app_type):
+    def get_apps_by_type(self, app_type):
         apps = []
         for app in self.apps.keys():
             if self.apps[app].app_type == app_type:
                 apps.append(self.apps[app])
         if not apps:
             raise AppException(
-                "No application of type '{app_type}' are yet created! Don't call .get_app_by_type in __init__!")
+                "No application of type '{app_type}' are yet created! Don't call .get_apps_by_type in __init__!")
         return apps
 
     def setup_configured_apps(self, config, ssh_pool):

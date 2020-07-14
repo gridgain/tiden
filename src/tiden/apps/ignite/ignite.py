@@ -84,6 +84,8 @@ class Ignite(IgniteComponents, App):
 
             self._parent_cls = kwargs.get('parent_cls', None)
 
+            self.num_nodes = kwargs.get('num_nodes', None)
+
     def set_grid_name(self, name):
         self.grid_name = name
 
@@ -147,8 +149,12 @@ class Ignite(IgniteComponents, App):
         node_idx = self.get_start_server_idx()
         for server_host in server_hosts:
             for idx in range(0, int(self.config['environment'].get('servers_per_host', 1))):
+                if self.num_nodes:
+                    if node_idx - self.get_start_server_idx() >= self.num_nodes:
+                        continue
                 self._add_server_node(server_host, ignite_name, node_idx)
                 node_idx += 1
+
 
         # Prepare symlinks commands
         ignite_artifact_config = self._update_ignite_artifact_config_symlinks(ignite_name, artifact_name)
@@ -335,6 +341,7 @@ class Ignite(IgniteComponents, App):
                 return
 
         self.nodes[node_id]['status'] = NodeStatus.STARTING
+        verbose = '-v' if kwargs.get('verbose', False) else ''
 
         server_num = len(self.get_alive_default_nodes()) + len(self.get_alive_additional_nodes())
         commands = {}
@@ -342,7 +349,7 @@ class Ignite(IgniteComponents, App):
                           "nohup " \
                           "  bin/ignite.sh " \
                           "     %s " \
-                          "     -v " \
+                          "     %s " \
                           "     %s " \
                           "     -J-DNODE_IP=%s " \
                           "     -J-DNODE_COMMUNICATION_PORT=%d " \
@@ -370,6 +377,7 @@ class Ignite(IgniteComponents, App):
             self.nodes[node_id]['ignite_home'],
             self.nodes[node_id]['config'],
             node_jvm_options,
+            verbose,
             self.nodes[node_id]['host'],
             self.get_node_communication_port(node_id),
             self.get_node_consistent_id(node_id),
@@ -404,7 +412,7 @@ class Ignite(IgniteComponents, App):
                           "nohup " \
                           "  bin/ignite.sh " \
                           "     {config_path} " \
-                          "     -v " \
+                          "     {verbose} " \
                           "     {jvm_options_str} " \
                           "     -J-DNODE_IP={node_ip} " \
                           "     -J-DNODE_COMMUNICATION_PORT={port} " \
@@ -430,6 +438,7 @@ class Ignite(IgniteComponents, App):
                 node_start_line.format(
                     home_path=node['ignite_home'],
                     config_path=node['config'],
+                    verbose='-v' if kwargs.get('verbose', False) else '',
                     jvm_options_str=node_jvm_options,
                     node_ip=node['host'],
                     port=self.get_node_communication_port(idx),
@@ -570,11 +579,13 @@ class Ignite(IgniteComponents, App):
                 print('Node with id %s already started. Adding to skipping list' % node_idx)
                 skipped_ids.append(node_idx)
 
+        verbose = kwargs.get('verbose', False)
+
         node_start_line = "cd %s; " \
                           "nohup " \
                           "  bin/ignite.sh " \
                           "    %s " \
-                          "    -v " \
+                          "    %s " \
                           "    %s " \
                           "    -J-DNODE_IP=%s " \
                           "    -J-DNODE_COMMUNICATION_PORT=%d " \
@@ -617,6 +628,7 @@ class Ignite(IgniteComponents, App):
                     node_start_line % (
                         self.nodes[node_idx]['ignite_home'],
                         self.nodes[node_idx]['config'],
+                        '-v' if verbose else '',
                         node_jvm_options,
                         host,
                         self.get_node_communication_port(node_idx),
@@ -686,6 +698,11 @@ class Ignite(IgniteComponents, App):
         cmd = {}
         env = self.config['environment']
         remote_test_module_dir = self.config['rt']['remote']['test_module_dir']
+
+        # rotate hosts so that additional nodes start at next free server host
+        for idx in self.nodes.keys():
+            host = next(cycle_hosts)
+
         for idx in range_to:
             host = next(cycle_hosts)
             ignite_home = '%s/%s.server.%s' % (remote_test_module_dir, ignite_name, idx)
@@ -858,13 +875,18 @@ class Ignite(IgniteComponents, App):
         else:
             log_print('No node %s in the grid' % node_idx, color='red')
 
-    def stop_nodes(self, force=False):
+    def stop_nodes(self, node_idx=None, force=False):
         """
         Stop all server nodes
         :return:
         """
         log_print('Stop nodes')
-        alive_nodes = self.get_alive_additional_nodes() + self.get_alive_default_nodes()
+        if not node_idx:
+            alive_nodes = self.get_alive_additional_nodes() + self.get_alive_default_nodes()
+        else:
+            alive_nodes = node_idx
+            if type(node_idx) != type([]):
+                alive_nodes = [node_idx]
         server_num = len(alive_nodes)
         log_put("Stop grid: running server nodes: %s/%s" % (str(server_num), str(server_num)))
         # self.ssh.killall('java')
