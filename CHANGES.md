@@ -1,7 +1,6 @@
 #### *0.6.5* @ 2020-07-15
 * changed `AppTestCase.get_app_by_type` to `AppTestCase.get_apps_by_type`
 * added `AppTestCase.add_apps_by_type`
-* added `@app` iterator
 * added `App.stop_nodes`
 * pull `JavaApp.wait_message` up to `App`
 * added `verbose` kwarg to `Ignite.start_nodes`, default `False` aka `-DIGNITE_QUIET=true` 
