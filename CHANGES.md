@@ -1,3 +1,14 @@
+#### *0.6.5* @ 2020-07-15
+* changed `AppTestCase.get_app_by_type` to `AppTestCase.get_apps_by_type`
+* added `AppTestCase.add_apps_by_type`
+* added `App.stop_nodes`
+* pull `JavaApp.wait_message` up to `App`
+* added `verbose` kwarg to `Ignite.start_nodes`, default `False` aka `-DIGNITE_QUIET=true` 
+* added `num_nodes` app option to `Ignite`
+* added `num_nodes` app option to `JavaApp`
+* added `get_node_env`, `get_node_run_dir` to `JavaApp`
+* fixed `JavaApp.check_requirements` use artifact name instead of app name
+
 #### *0.6.4* @ 2020-06-24
 * added `use_ssh_agent` option to environment config to allow SshPool use SSH Agent
 

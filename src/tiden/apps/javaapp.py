@@ -14,16 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sys import stdout
-from time import time, sleep
-
-from tiden import log_put, log_print, TidenException
+from tiden import log_print, TidenException
 from tiden.apps import App, NodeStatus
 
 
 class JavaApp(App):
     default_jvm_options = [
-        '-server',
         '-Djava.net.preferIPv4Stack=true',
         '-Djava.net.preferIPv6Addresses=false',
     ]
@@ -38,8 +34,12 @@ class JavaApp(App):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app_mode = kwargs['app_mode'] if 'app_mode' in kwargs and kwargs['app_mode'] else self.__class__.app_mode
+        self.num_nodes = kwargs.get('num_nodes', None)
         self.start_timeout = self.__class__.start_timeout
         self.jvm_options = self.__class__.default_jvm_options.copy()
+        env_jvm_options = self.get_env_jvm_options(self.app_mode)
+        if env_jvm_options:
+            self.jvm_options.extend(env_jvm_options)
         self.class_name = self.__class__.class_name
 
     def setup(self):
@@ -50,15 +50,18 @@ class JavaApp(App):
 
     def add_nodes(self, mode='client'):
         for host in self.get_hosts(mode=mode):
-            for node_idx in range(0, self.get_nodes_per_host(mode=mode)):
-                self.add_node(host)
+            for host_node in range(0, self.get_nodes_per_host(mode=mode)):
+                if self.num_nodes:
+                    if len(self.nodes) >= self.num_nodes:
+                        continue
+                self.add_node(host, mode=mode)
 
     def add_node(self, host=None, mode='client'):
         node_idx = len(self.nodes)
         self.nodes[node_idx] = {
             'host': host,
             'status': NodeStatus.NEW,
-            'run_dir': f"{self.java_app_home}/{self.name}.{mode}.{node_idx}"
+            'run_dir': self.get_node_run_dir(mode, node_idx)
         }
 
     def rotate_node_log(self, node_idx):
@@ -67,71 +70,6 @@ class JavaApp(App):
             'run_counter': run_counter,
             'log': f"{self.remote_test_dir}/{self.name}.node.{node_idx}.{run_counter}.log",
         })
-
-    def _print_wait_for(self, message, node_idxs, time, timeout, done):
-        nodes_str = ', '.join([str(node_id) for node_id in node_idxs])
-        log_put(f"Waiting for '{message}' at nodes [{nodes_str}], {time}/{timeout} sec")
-        if done:
-            stdout.flush()
-            log_print('')
-
-    def wait_for(
-            self,
-            condition=lambda x: True,
-            action=lambda: None,
-            timeout=30,
-            interval=1,
-            progress_ticks=4,
-            progress=lambda t, done: None,
-            failed=lambda x: False,
-            success=lambda x: True
-    ):
-        start_time = time()
-        end_time = start_time + timeout
-
-        def _progress_seconds():
-            return timeout - max(0, int(end_time - time()))
-
-        i = 0
-        progress(_progress_seconds(), False)
-        try:
-            while True:
-                result = action()
-                if condition(result):
-                    return success(result)
-                elif failed is not None and failed(result):
-                    return False
-                if time() > end_time:
-                    return False
-                sleep(interval)
-                if progress and progress_ticks and i % progress_ticks == 0:
-                    progress(_progress_seconds(), False)
-                i += 1
-        finally:
-            if progress:
-                progress(_progress_seconds(), True)
-
-    def wait_message(self, message, nodes_idx=None, timeout=30):
-        if nodes_idx is None:
-            node_idxs = self.nodes.keys()
-        elif isinstance(nodes_idx, int):
-            node_idxs = [nodes_idx]
-        else:
-            node_idxs = [int(node_idx) for node_idx in nodes_idx]
-
-        return self.wait_for(
-            action=lambda: self.grep_log(*node_idxs, message={'remote_regex': message, 'local_regex': f'({message})'}),
-            condition=lambda result: all([
-                node_id in result and
-                'message' in result[node_id] and
-                result[node_id]['message'] == message
-                for node_id in node_idxs
-            ]),
-            timeout=timeout,
-            interval=2,
-            progress_ticks=3,
-            progress=lambda t, done: self._print_wait_for(message, node_idxs, t, timeout, done)
-        )
 
     def start_nodes(self):
         start_command = {}
@@ -154,7 +92,7 @@ class JavaApp(App):
                 node['PID'] = int(result[host][pids[node_idx]].strip())
                 if not node['PID']:
                     raise ValueError(f'no PID for node {node_idx}')
-            except ValueError or IndexError or KeyError  as e:
+            except ValueError or IndexError or KeyError as e:
                 raise TidenException(f"Can't start {self.name.title()} node {node_idx} at host {host}")
         check_command = {}
         status = {}
@@ -198,8 +136,13 @@ class JavaApp(App):
         ]
 
     def get_node_start_commands(self, node_idx):
-        return [
+        commands = [
             'mkdir -p %s' % self.nodes[node_idx]['run_dir'],
+        ]
+        env = self.get_node_env(node_idx)
+        if env:
+            commands.extend([f'export {env_name}=\"{env_value}\"' for env_name, env_value in env.items()])
+        commands.extend([
             'cd %s; nohup java %s -cp %s %s %s 1>%s 2>&1 & echo $!' % (
                 self.nodes[node_idx]['run_dir'],
                 self.get_node_jvm_options(node_idx),
@@ -208,7 +151,20 @@ class JavaApp(App):
                 self.get_node_args(node_idx),
                 self.nodes[node_idx]['log'],
             ),
-        ]
+        ])
+        return commands
+
+    def get_node_env(self, node_idx):
+        return {}
+
+    def get_node_run_dir(self, mode, node_idx):
+        return f"{self.java_app_home}/{self.name}.{mode}.{node_idx}"
+
+    def get_env_jvm_options(self, mode='client'):
+        if self.app_type in self.config['environment']:
+            return self.config['environment'][self.app_type].get(f'{mode}_jvm_options', [])
+        else:
+            return self.config['environment'].get(f'{mode}_jvm_options', [])
 
     def get_node_jvm_options(self, node_idx):
         return ' '.join(self.jvm_options)
@@ -217,4 +173,4 @@ class JavaApp(App):
         return ''
 
     def check_requirements(self):
-        self.require_artifact(self.name)
+        self.require_artifact(self.artifact_name)

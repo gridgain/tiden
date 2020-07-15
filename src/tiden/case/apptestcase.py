@@ -40,6 +40,9 @@ class AppTestCase:
     def add_app(self, app, **kwargs):
         self.tiden.apps.add_app(app, **kwargs)
 
+    def add_apps_by_type(self, app_type, **kwargs):
+        self.tiden.apps.add_apps_by_type(app_type, self.tiden.config['artifacts'], **kwargs)
+
     def get_app(self, app_name: str) -> App:
         return self.tiden.apps.get_app(app_name)
 
@@ -83,8 +86,8 @@ class AppTestCase:
 
         return run_info if run_info else None
 
-    def get_app_by_type(self, app_type):
-        return self.tiden.apps.get_app_by_type(app_type)
+    def get_apps_by_type(self, app_type):
+        return self.tiden.apps.get_apps_by_type(app_type)
 
     def create_app_config_set(self, app, config_set_name='default', deploy=False, config_type=None, **variables):
         """
