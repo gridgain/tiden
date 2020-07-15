@@ -1,4 +1,4 @@
-#### *0.6.5* @ 2020-07-10
+#### *0.6.5* @ 2020-07-15
 * changed `AppTestCase.get_app_by_type` to `AppTestCase.get_apps_by_type`
 * added `AppTestCase.add_apps_by_type`
 * added `@app` iterator
