@@ -264,7 +264,7 @@ class SshPool(AbstractSshPool):
         if self.config.get('env_vars'):
             for env_var_name in self.config['env_vars'].keys():
                 val = self.config['env_vars'][env_var_name]
-                env_vars += f"{env_var_name}={val};"
+                env_vars += f"export {env_var_name}=\"{val}\";"
         for command in commands:
             try:
                 if '2>&1' not in command:
