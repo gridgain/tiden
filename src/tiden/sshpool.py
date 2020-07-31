@@ -42,7 +42,7 @@ class SshPool(AbstractSshPool):
         self.retries = kwargs.get('retries')
         self.username = self.config['username']
         self.private_key_path = self.config['private_key_path']
-        self.use_ssh_agent = self.config['use_ssh_agent']
+        self.use_ssh_agent = self.config.get('use_ssh_agent')
         self.threads_num = self.config['threads_num']
         self.home = str(self.config['home'])
         if self.retries is None:
