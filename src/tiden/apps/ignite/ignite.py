@@ -50,6 +50,13 @@ class Ignite(IgniteComponents, App):
 
     _setup = False
 
+    # whether to run ignite.sh with '-v' (aka IGNITE_QUIET=false)
+    _verbose = False
+
+    # None - add all available hosts/nodes (default)
+    # N > 0 - add at most N nodes
+    _num_nodes = None
+
     def __init__(self, *args, **kwargs):
         # print('Ignite.__init__')
         if len(args) == 1 and isinstance(args[0], Ignite):
@@ -84,7 +91,9 @@ class Ignite(IgniteComponents, App):
 
             self._parent_cls = kwargs.get('parent_cls', None)
 
-            self.num_nodes = kwargs.get('num_nodes', None)
+            self.num_nodes = kwargs.get('num_nodes', Ignite._num_nodes)
+
+            self._verbose = kwargs.get('verbose', Ignite._verbose)
 
     def set_grid_name(self, name):
         self.grid_name = name
@@ -154,7 +163,6 @@ class Ignite(IgniteComponents, App):
                         continue
                 self._add_server_node(server_host, ignite_name, node_idx)
                 node_idx += 1
-
 
         # Prepare symlinks commands
         ignite_artifact_config = self._update_ignite_artifact_config_symlinks(ignite_name, artifact_name)
@@ -341,7 +349,7 @@ class Ignite(IgniteComponents, App):
                 return
 
         self.nodes[node_id]['status'] = NodeStatus.STARTING
-        verbose = '-v' if kwargs.get('verbose', False) else ''
+        verbose = '-v' if kwargs.get('verbose', self._verbose) else ''
 
         server_num = len(self.get_alive_default_nodes()) + len(self.get_alive_additional_nodes())
         commands = {}
@@ -438,7 +446,7 @@ class Ignite(IgniteComponents, App):
                 node_start_line.format(
                     home_path=node['ignite_home'],
                     config_path=node['config'],
-                    verbose='-v' if kwargs.get('verbose', False) else '',
+                    verbose='-v' if kwargs.get('verbose', self._verbose) else '',
                     jvm_options_str=node_jvm_options,
                     node_ip=node['host'],
                     port=self.get_node_communication_port(idx),
@@ -579,7 +587,7 @@ class Ignite(IgniteComponents, App):
                 print('Node with id %s already started. Adding to skipping list' % node_idx)
                 skipped_ids.append(node_idx)
 
-        verbose = kwargs.get('verbose', False)
+        verbose = '-v' if kwargs.get('verbose', self._verbose) else ''
 
         node_start_line = "cd %s; " \
                           "nohup " \
@@ -628,7 +636,7 @@ class Ignite(IgniteComponents, App):
                     node_start_line % (
                         self.nodes[node_idx]['ignite_home'],
                         self.nodes[node_idx]['config'],
-                        '-v' if verbose else '',
+                        verbose,
                         node_jvm_options,
                         host,
                         self.get_node_communication_port(node_idx),
@@ -804,6 +812,7 @@ class Ignite(IgniteComponents, App):
                 self._delete_server_node(node_idx)
             else:
                 log_print('There is no PID for node %s' % node_idx, color='red')
+                self.nodes[node_idx]['status'] = NodeStatus.KILLED
         else:
             log_print('No node %s in the grid' % node_idx, color='red')
 

@@ -49,7 +49,7 @@ class Zookeeper (App):
                     zk_nodes_amount = self.config['environment'].get('zookeeper_total_nodes')
                 else:
                     log_print('WARN: Could not find zookeeper_total_nodes in environment, so default value 3 '
-                              'Zookeeper nodes will be used', color='red')
+                              'Zookeeper nodes will be used', color='debug')
                     zk_nodes_amount = 3
 
                 self.zk_ports_prefix = '218{}'

@@ -41,7 +41,7 @@ class SshPool(AbstractSshPool):
         super(SshPool, self).__init__(ssh_config, **kwargs)
         self.retries = kwargs.get('retries')
         self.username = self.config['username']
-        self.private_key_path = self.config['private_key_path']
+        self.private_key_path = self.config.get('private_key_path')
         self.use_ssh_agent = self.config.get('use_ssh_agent')
         self.threads_num = self.config['threads_num']
         self.home = str(self.config['home'])
@@ -102,7 +102,7 @@ class SshPool(AbstractSshPool):
             log_put("Checking connection to %s ... " % host, 2)
             connected = False
             ssh = None
-            if self.private_key_path != '' and self.private_key_path:
+            if self.private_key_path:
                 if not path.exists(self.private_key_path):
                     raise TidenException("Private key %s not found" % self.private_key_path)
             elif not self.use_ssh_agent:
@@ -135,7 +135,7 @@ class SshPool(AbstractSshPool):
                         break
                 except socket.gaierror as e:
                     log_print('', 2)
-                    log_print("Error: host '%s' is incorrect \n" % host, color='red')
+                    log_print("ERROR: host '%s' is incorrect \n" % host, color='red')
                     log_print("%s\n" % str(e))
                     exit(1)
                 except TimeoutError as e:

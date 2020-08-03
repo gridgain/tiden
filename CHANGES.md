@@ -1,3 +1,6 @@
+#### *0.6.5.2* @ 2020-08-03
+* few fixes
+
 #### *0.6.5.1* @ 2020-07-16
 * fixed `environment.env_vars` propagation to remote hosts
 
