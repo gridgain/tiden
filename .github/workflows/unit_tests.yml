@@ -5,8 +5,8 @@ name: Run Unit tests
 on:
   pull_request:
     branches: [master]
-  check_run:
-    types: [created, rerequested, requested_action]
+  check_suite:
+    types: [requested, rerequested]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -21,3 +21,6 @@ jobs:
 
     - name: Python Pytest Github Action
       uses: fylein/python-pytest-github-action@v2
+      with:
+         args: pip3 install -r requirements.txt && pytest tests
+      
