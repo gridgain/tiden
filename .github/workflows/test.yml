@@ -1,0 +1,23 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Test
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch'
+        default: master
+        required: false
+
+jobs:
+  say_hello:
+    runs-on: self-hosted
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+    - name: Run a tests
+      run: |
+        echo "Hello ${{ github.event.inputs.branch }}!"
