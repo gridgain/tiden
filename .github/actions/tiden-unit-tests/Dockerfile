@@ -2,7 +2,9 @@ FROM python:3.7
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get \
+RUN apt-get 
+      update 
+  && apt-get \
       install -y --no-install-recommends \
         python3.7-dev \
         libffi-dev \
