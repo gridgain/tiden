@@ -1,0 +1,9 @@
+name: "Tiden unit tests"
+description: "Run Tiden unit tests with py.test"
+# inputs:
+# outputs:
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  #args:
+  #  - 
