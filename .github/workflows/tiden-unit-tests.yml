@@ -28,6 +28,8 @@ jobs:
 
     # Runs a test
     - name: Run a test from other repo
-      # id :
-      uses: ggprivate/tiden_gridgain_pkg/.github/actions/test@v1
-      # with:
+      run: |
+        cd ../
+        git clone git@github.com:ggprivate/tiden_gridgain_pkg.git
+        cd tiden_gridgain_pkg
+        ls -la
