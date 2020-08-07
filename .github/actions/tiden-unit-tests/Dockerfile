@@ -10,7 +10,8 @@ RUN apt-get \
         libffi-dev \
         libssl-dev \
         psmisc \
-        bash \
+        openjdk-11-jdk-headless \
+  && java -version && jps -v \
   && pip3.7 \
       install --no-cache-dir -q -U \
         pip \
