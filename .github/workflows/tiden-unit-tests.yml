@@ -23,5 +23,5 @@ jobs:
     # Runs a single command using the runners shell
     - name: Run a unit tests
       # id :
-      uses: actions/tiden-unit-tests@v1
+      uses: ./.github/actions/tiden-unit-tests
       # with:
