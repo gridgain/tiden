@@ -25,3 +25,9 @@ jobs:
       # id :
       uses: ./.github/actions/tiden-unit-tests
       # with:
+
+    # Runs a test
+    - name: Run a test from other repo
+      # id :
+      uses: ggprivate/tiden_gridgain_pkg/.github/actions/test
+      # with:
