@@ -29,5 +29,5 @@ jobs:
     # Runs a test
     - name: Run a test from other repo
       # id :
-      uses: ggprivate/tiden_gridgain_pkg/.github/actions/test
+      uses: ggprivate/tiden_gridgain_pkg/.github/actions/test@v1
       # with:
