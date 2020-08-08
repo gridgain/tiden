@@ -41,7 +41,7 @@ class DockerManager:
         Delete all containers from all hosts
         """
         self.running_containers = {}
-        log_print("Remove all running containers")
+        log_print("Remove all containers")
         cmd = "docker rm -f $(docker ps -aq)"
         self.ssh.exec([cmd])
 
@@ -220,7 +220,36 @@ class DockerManager:
         cmd = f'docker build {path}'
         if 'tag' in kwargs:
             cmd += f" -t {kwargs['tag']}"
-        self.ssh.exec_on_host(host, [cmd])
+        if 'file' in kwargs:
+            cmd += f" -f {kwargs['file']}"
+        return self.ssh.exec_on_host(host, [cmd])
+
+    def list_images(self, host=None):
+        images = {}
+        cmd = 'docker images --format "{{.ID}};{{.Repository}};{{.Tag}}"'
+        if host:
+            output = self.ssh.exec_on_host(host, [cmd])
+        else:
+            output = self.ssh.exec([cmd])
+        for host, out in output.items():
+            rows = out[0].strip().split('\n')
+            for row in filter(lambda s: len(s) > 0, rows):
+                (id, repo, tag) = row.split(';')
+                if host not in images.keys():
+                    images[host] = {}
+                name = f'{repo}:{tag}'
+                images[host][name] = {
+                    'id': id,
+                    'name': name,
+                    'repository': repo,
+                    'tag': tag
+                }
+
+        return images
+
+    def is_image_exist(self, host, name):
+        images = self.list_images(host)
+        return bool(self.find(images, lambda image: image['name'] == name))
 
     def restart_container(self, host, container):
         cmd = f'docker restart {container}'
@@ -301,7 +330,8 @@ class DockerManager:
                                  image=image,
                                  commands=commands)
 
-        log_print("Running container '{}' from image '{}' on {}".format(container_name, image_name, host))
+        log_print("Starting container '{}' from image '{}' on {}".format(container_name, image_name, host))
+        log_print(f"Cmd: {cmd}", color='debug')
         output = self.ssh.exec_on_host(host, [cmd])[host]
         if len(output) != 1:
             raise AssertionError("Can't run image {} on host:\n{}".format(image_name, host, "".join(output)))
@@ -541,7 +571,9 @@ class DockerManager:
             if add_manager_init_com is None:
                 self.swarm_manager = host
                 swarm_init_res = self.ssh.exec_on_host(host, [init_cmd])
-                clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
+                clear_res = []
+                if swarm_init_res and host in swarm_init_res and type(swarm_init_res[host]) == type([]):
+                    clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
                 assert [line for line in clear_res if 'Swarm initialized' in line],\
                     'Failed to initialize swarm on {}: {}'.format(host, ' '.join(clear_res))
                 add_manager_init_com = [line for line in clear_res if line.startswith('docker')]

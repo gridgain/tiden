@@ -43,10 +43,7 @@ class IgniteJmxMixin(IgniteLogDataMixin):
         )
 
     def get_jmx_utility(self):
-        if self._jmx is None:
-            from tiden.utilities import JmxUtility
-            self._jmx = JmxUtility(self)
-        return self._jmx
+        raise NotImplementedError
 
     jmx = property(get_jmx_utility, None)
 

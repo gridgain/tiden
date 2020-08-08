@@ -21,169 +21,169 @@ import os.path
 from tiden.utilities.control_utility import ControlUtility
 
 help_activate_deactivate_only = {
-            'activate': 'activate',
-            'deactivate': 'deactivate',
-        }
+    'activate': 'activate',
+    'deactivate': 'deactivate',
+}
 
 commands_activate_deactivate_only = {
-            'activate': '',
-            'deactivate': '',
-        }
+    'activate': '',
+    'deactivate': '',
+}
 
 help_2_4_baseline = {
-            'activate cluster': 'activate',
-            'deactivate cluster': 'deactivate',
-            'print current cluster state': 'state',
-            'print cluster baseline topology': 'baseline_print',
-            'add nodes into baseline topology': 'baseline_add',
-            'remove nodes from baseline topology': 'baseline_remove',
-            'set baseline topology': 'baseline_set',
-            'set baseline topology based on version': 'baseline_version',
-        }
+    'activate cluster': 'activate',
+    'deactivate cluster': 'deactivate',
+    'print current cluster state': 'state',
+    'print cluster baseline topology': 'baseline_print',
+    'add nodes into baseline topology': 'baseline_add',
+    'remove nodes from baseline topology': 'baseline_remove',
+    'set baseline topology': 'baseline_set',
+    'set baseline topology based on version': 'baseline_version',
+}
 
 commands_2_4_no_force = {
-            'activate': '',
-            'deactivate': '',
-            'state': '',
-            'baseline_print': '',
-            'baseline_add': '',
-            'baseline_remove': '',
-            'baseline_set': '',
-            'baseline_version': '',
-        }
+    'activate': '',
+    'deactivate': '',
+    'state': '',
+    'baseline_print': '',
+    'baseline_add': '',
+    'baseline_remove': '',
+    'baseline_set': '',
+    'baseline_version': '',
+}
 
 commands_2_4_with_force = {
-            'activate': '',
-            'deactivate': '--force',
-            'state': '',
-            'baseline_print': '',
-            'baseline_add': '--force',
-            'baseline_remove': '--force',
-            'baseline_set': '--force',
-            'baseline_version': '--force',
-        }
+    'activate': '',
+    'deactivate': '--force',
+    'state': '',
+    'baseline_print': '',
+    'baseline_add': '--force',
+    'baseline_remove': '--force',
+    'baseline_set': '--force',
+    'baseline_version': '--force',
+}
 
 help_2_5_1_and_higher = {
-            'activate cluster': 'activate',
-            'deactivate cluster': 'deactivate',
-            'print current cluster state': 'state',
-            'print cluster baseline topology': 'baseline_print',
-            'add nodes into baseline topology': 'baseline_add',
-            'remove nodes from baseline topology': 'baseline_remove',
-            'set baseline topology': 'baseline_set',
-            'set baseline topology based on version': 'baseline_version',
-            'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
-            'view caches information in a cluster. for more details type': 'view_caches',
-        }
+    'activate cluster': 'activate',
+    'deactivate cluster': 'deactivate',
+    'print current cluster state': 'state',
+    'print cluster baseline topology': 'baseline_print',
+    'add nodes into baseline topology': 'baseline_add',
+    'remove nodes from baseline topology': 'baseline_remove',
+    'set baseline topology': 'baseline_set',
+    'set baseline topology based on version': 'baseline_version',
+    'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
+    'view caches information in a cluster. for more details type': 'view_caches',
+}
 
 help_2_5_8_and_higher = {
-            'activate cluster': 'activate',
-            'deactivate cluster': 'deactivate',
-            'print current cluster state': 'state',
-            'print cluster baseline topology': 'baseline_print',
-            'add nodes into baseline topology': 'baseline_add',
-            'remove nodes from baseline topology': 'baseline_remove',
-            'set baseline topology': 'baseline_set',
-            'set baseline topology based on version': 'baseline_version',
-            'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
-            'print detailed information (topology and key lock ownership) about specific transaction': 'tx_info',
-            'view caches information in a cluster. for more details type': 'view_caches',
-        }
+    'activate cluster': 'activate',
+    'deactivate cluster': 'deactivate',
+    'print current cluster state': 'state',
+    'print cluster baseline topology': 'baseline_print',
+    'add nodes into baseline topology': 'baseline_add',
+    'remove nodes from baseline topology': 'baseline_remove',
+    'set baseline topology': 'baseline_set',
+    'set baseline topology based on version': 'baseline_version',
+    'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
+    'print detailed information (topology and key lock ownership) about specific transaction': 'tx_info',
+    'view caches information in a cluster. for more details type': 'view_caches',
+}
 
 help_2_9_0_and_higher = {
-            'activate cluster (deprecated. use --set-state instead)': 'activate',
-            'deactivate cluster (deprecated. use --set-state instead)': 'deactivate',
-            'change cluster state': 'set_state',
-            'change the master key': 'change_master_key',
-            'print the current master key name': 'print_master_key',
-            'kill service by name': 'kill_service',
-            'kill compute task by session id': 'kill_compute_task',
-            'kill sql query by query id': 'kill_sql_query',
-            'kill continuous query by routine id': 'kill_continuous_query',
-            'kill scan query by node id, cache name and query id': 'kill_scan_query',
-            'kill transaction by xid': 'kill_tx',
-            'print current cluster state': 'state',
-            'print cluster baseline topology': 'baseline_print',
-            'add nodes into baseline topology': 'baseline_add',
-            'remove nodes from baseline topology': 'baseline_remove',
-            'set baseline topology': 'baseline_set',
-            'set baseline topology based on version': 'baseline_version',
-            'set baseline autoadjustment settings': 'baseline_autoadjustment',
-            'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
-            'print detailed information (topology and key lock ownership) about specific transaction': 'tx_info',
-            'view caches information in a cluster. for more details type': 'view_caches',
-            'view diagnostic information in a cluster. for more details type': 'view_diagnostic',
-        }
+    'activate cluster (deprecated. use --set-state instead)': 'activate',
+    'deactivate cluster (deprecated. use --set-state instead)': 'deactivate',
+    'change cluster state': 'set_state',
+    'change the master key': 'change_master_key',
+    'print the current master key name': 'print_master_key',
+    'kill service by name': 'kill_service',
+    'kill compute task by session id': 'kill_compute_task',
+    'kill sql query by query id': 'kill_sql_query',
+    'kill continuous query by routine id': 'kill_continuous_query',
+    'kill scan query by node id, cache name and query id': 'kill_scan_query',
+    'kill transaction by xid': 'kill_tx',
+    'print current cluster state': 'state',
+    'print cluster baseline topology': 'baseline_print',
+    'add nodes into baseline topology': 'baseline_add',
+    'remove nodes from baseline topology': 'baseline_remove',
+    'set baseline topology': 'baseline_set',
+    'set baseline topology based on version': 'baseline_version',
+    'set baseline autoadjustment settings': 'baseline_autoadjustment',
+    'list or kill transactions': 'tx',  # ['tx_list','tx_kill']
+    'print detailed information (topology and key lock ownership) about specific transaction': 'tx_info',
+    'view caches information in a cluster. for more details type': 'view_caches',
+    'view diagnostic information in a cluster. for more details type': 'view_diagnostic',
+}
 
 commands_2_5_1_and_higher_with_force = {
-            'activate': '',
-            'deactivate': '--force',
-            'state': '',
-            'baseline_print': '',
-            'baseline_add': '--force',
-            'baseline_remove': '--force',
-            'baseline_set': '--force',
-            'baseline_version': '--force',
-            'tx': '--force',
-            # 'tx_list': '',
-            # 'tx_kill': '--force',
-            'view_caches': '',
+    'activate': '',
+    'deactivate': '--force',
+    'state': '',
+    'baseline_print': '',
+    'baseline_add': '--force',
+    'baseline_remove': '--force',
+    'baseline_set': '--force',
+    'baseline_version': '--force',
+    'tx': '--force',
+    # 'tx_list': '',
+    # 'tx_kill': '--force',
+    'view_caches': '',
 }
 
 commands_2_5_1_and_higher_with_yes = {
-            'activate': '',
-            'deactivate': '--yes',
-            'state': '',
-            'baseline_print': '',
-            'baseline_add': '--yes',
-            'baseline_remove': '--yes',
-            'baseline_set': '--yes',
-            'baseline_version': '--yes',
-            'tx': '--yes',
-            # 'tx_list': '',
-            # 'tx_kill': '--force',
-            'view_caches': '',
+    'activate': '',
+    'deactivate': '--yes',
+    'state': '',
+    'baseline_print': '',
+    'baseline_add': '--yes',
+    'baseline_remove': '--yes',
+    'baseline_set': '--yes',
+    'baseline_version': '--yes',
+    'tx': '--yes',
+    # 'tx_list': '',
+    # 'tx_kill': '--force',
+    'view_caches': '',
 }
 
 commands_2_5_8_and_higher_with_yes = {
-            'activate': '',
-            'deactivate': '--yes',
-            'state': '',
-            'baseline_print': '',
-            'baseline_add': '--yes',
-            'baseline_remove': '--yes',
-            'baseline_set': '--yes',
-            'baseline_version': '--yes',
-            'tx': '--yes',
-            'tx_info': '',
-            # 'tx_list': '',
-            # 'tx_kill': '--force',
-            'view_caches': '',
+    'activate': '',
+    'deactivate': '--yes',
+    'state': '',
+    'baseline_print': '',
+    'baseline_add': '--yes',
+    'baseline_remove': '--yes',
+    'baseline_set': '--yes',
+    'baseline_version': '--yes',
+    'tx': '--yes',
+    'tx_info': '',
+    # 'tx_list': '',
+    # 'tx_kill': '--force',
+    'view_caches': '',
 }
 
 commands_2_9_0_and_higher = {
-            'activate': '',
-            'deactivate': '--yes',
-            'state': '',
-            'set_state': '--yes',
-            'baseline_print': '',
-            'baseline_add': '--yes',
-            'baseline_remove': '--yes',
-            'baseline_set': '--yes',
-            'baseline_version': '--yes',
-            'baseline_autoadjustment': '--yes',
-            'tx': '--yes',
-            'tx_info': '',
-            'view_caches': '',
-            'view_diagnostic': '',
-            'kill_sql_query': '',
-            'kill_scan_query': '',
-            'kill_continuous_query': '',
-            'kill_compute_task': '',
-            'kill_service': '',
-            'print_master_key': '',
-            'change_master_key': '',
-            'kill_tx': '',
+    'activate': '',
+    'deactivate': '--yes',
+    'state': '',
+    'set_state': '--yes',
+    'baseline_print': '',
+    'baseline_add': '--yes',
+    'baseline_remove': '--yes',
+    'baseline_set': '--yes',
+    'baseline_version': '--yes',
+    'baseline_autoadjustment': '--yes',
+    'tx': '--yes',
+    'tx_info': '',
+    'view_caches': '',
+    'view_diagnostic': '',
+    'kill_sql_query': '',
+    'kill_scan_query': '',
+    'kill_continuous_query': '',
+    'kill_compute_task': '',
+    'kill_service': '',
+    'print_master_key': '',
+    'change_master_key': '',
+    'kill_tx': '',
 }
 
 testdata = [
@@ -267,6 +267,7 @@ testdata = [
 def test_parse_help(data):
     class MockIgnite:
         name = 'ignite'
+
     ignite = MockIgnite()
     cu = ControlUtility(ignite)
     ignite_version = data['ignite_version']
@@ -300,4 +301,3 @@ def test_parse_help(data):
 
         for command, use_force in data['commands'].items():
             assert use_force == commands[command]['force'], f"Force {command} argument matches"
-

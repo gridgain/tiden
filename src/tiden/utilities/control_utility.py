@@ -43,6 +43,11 @@ class ControlUtility:
         self.latest_command = None
         self._parent_cls = parent_cls
 
+    def get_ssh(self):
+        return self.ignite.ssh
+
+    ssh = property(get_ssh, None)
+
     def enable_authentication(self, login, password):
         self.authentication_enabled = True
         self.auth_login = login
@@ -117,7 +122,7 @@ class ControlUtility:
 
         nohup = ''
         if kwargs.get('background'):
-            print('In background mode')
+            log_print("In background mode")
             bg = f'> {kwargs["log"]} 2>&1 &'
             nohup = 'nohup'
         elif kwargs.get('log'):
@@ -139,18 +144,22 @@ class ControlUtility:
             ]
         }
 
-        ssh_options = kwargs.get('ssh_options', {})
         self.ignite.logger.debug(commands)
-        results = self.ignite.ssh.exec(commands, **ssh_options)
+        ssh_options = kwargs.get('ssh_options', {})
+
+        results = self.ssh.exec(commands, **ssh_options)
+
         if kwargs.get('log'):
             limit = ''
             if kwargs.get('output_limit'):
                 limit = f' | tail -n {kwargs["output_limit"]}'
-            lines = self.ignite.ssh.exec_on_host(client_host, [f'cat {kwargs["log"]}{limit}'])[client_host][0]
+            lines = self.ssh.exec_on_host(client_host, [f'cat {kwargs["log"]}{limit}'])[client_host][0]
         else:
             lines = results[client_host][0]
+
         if kwargs.get('show_output', True):
             self.__print_control_utility_output(lines)
+
         self.latest_utility_output = lines
         self.latest_utility_host = client_host
         if kwargs.get('all_required'):
@@ -179,7 +188,7 @@ class ControlUtility:
         ignite_home = self.ignite.nodes[nodes[0]]['ignite_home']
         ignite_host = self.ignite.nodes[nodes[0]]['host']
 
-        output = self.ignite.ssh.exec_on_host(ignite_host, ['cd {}; bin/control.sh --help'.format(ignite_home)])
+        output = self.ssh.exec_on_host(ignite_host, ['cd {}; bin/control.sh --help'.format(ignite_home)])
         if output[ignite_host]:
             output = output[ignite_host][0].split("\n")
             self.ssl_keys = {}
@@ -225,6 +234,7 @@ class ControlUtility:
             'kill transaction by xid': 'kill_tx',
             'print the current master key name': 'print_master_key',
             'change the master key': 'change_master_key',
+            # TODO: DR help requires additional parsing
         }
         for help_string, help_data in parsed_help.items():
             found = False
@@ -405,7 +415,7 @@ class ControlUtility:
                 )
             server_nodes_num += 1
         log_print(activate_commands, color='debug')
-        self.ignite.ssh.exec(activate_commands, **kwargs)
+        self.ssh.exec(activate_commands, **kwargs)
         activated_server_nodes_num = 0
         timeout_counter = 0
         log_put("Waiting %sd nodes: 0/%s" % (command, server_nodes_num))
@@ -414,7 +424,7 @@ class ControlUtility:
         if 'activation_timeout' in kwargs:
             activation_timeout = int(kwargs['activation_timeout'])
         while timeout_counter < activation_timeout and not completed:
-            results = self.ignite.ssh.exec(check_commands, **kwargs)
+            results = self.ssh.exec(check_commands, **kwargs)
             activated_server_nodes_num = 0
             for host in results.keys():
                 for out_lines in results[host]:
@@ -565,7 +575,7 @@ class ControlUtility:
         else:
             cmd = 'cat {}'.format(file_path)
         print_red('Idle verify dump: %s' % cmd)
-        result = self.ignite.ssh.exec([cmd])
+        result = self.ssh.exec([cmd])
         for host, command_out in result.items():
             command_out = command_out[0]
             if 'No such file or directory' not in command_out and command_out != '':
@@ -676,21 +686,6 @@ class ControlUtility:
                                         '\n'.join(search_in),
                                         set(found).difference(set(search_for))))
         return result
-
-    @staticmethod
-    def _print_snapshot_utility_output(output, start_msg, stop_msg):
-        success, include_in_log = False, False
-        for line in output.split('\n'):
-            if line.startswith(start_msg):
-                include_in_log = True
-            if include_in_log:
-                log_print(line)
-            if stop_msg in line:
-                log_print(line)
-                include_in_log = False
-                if 'successfully finished' in line:
-                    success = True
-        return success
 
     def check_all_msgs_in_utility_output(self, lines_to_search):
         utility_output = self.latest_utility_output.split('\n')
@@ -854,7 +849,7 @@ class ControlUtility:
             self.control_utility(*args)
             sleep(5)
         else:
-            log_print('Could not disable baseline autoajustment as it is not supported'.
+            log_print('ERROR: Could not disable baseline auto-adjustment as it is not supported'.
                       format('disable' if disable else 'enable'), color='red')
 
     def get_auto_baseline_params(self):

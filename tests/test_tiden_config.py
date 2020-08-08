@@ -17,8 +17,8 @@
 from tiden.tidenconfig import TidenConfig
 import pytest
 
-@pytest.fixture
 
+@pytest.fixture
 def example_config():
     c = TidenConfig({
         'clean': True,
@@ -109,8 +109,8 @@ def test_config_attr_ignite_version(example_config):
 def test_config_attr_gridgain_version(example_config):
     assert '8.4.2-p2' == example_config.gridgain_version
 
-@pytest.fixture
 
+@pytest.fixture
 def example_config_without_ignite():
     c = TidenConfig({
         'artifacts': {
@@ -125,8 +125,8 @@ def example_config_without_ignite():
     })
     return c
 
-@pytest.fixture
 
+@pytest.fixture
 def example_config_with_renamed_ignite():
     c = TidenConfig({
         'artifacts': {
@@ -154,8 +154,8 @@ def test_config_attr_ignite_by_name(example_config_with_renamed_ignite):
 def test_config_attr_unexistant_env_var(example_config_with_renamed_ignite):
     assert example_config_with_renamed_ignite.environment['servers_per_host'] is None
 
-@pytest.fixture
 
+@pytest.fixture
 def example_config_with_patches():
     c = TidenConfig({
         'simple': 45,

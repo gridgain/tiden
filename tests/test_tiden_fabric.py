@@ -18,8 +18,8 @@ import pytest
 from tiden.tidenfabric import TidenFabric
 from tiden.tidenconfig import TidenConfig
 
-@pytest.fixture
 
+@pytest.fixture
 def example_dict_config():
     c = {
         'clean': True,
@@ -87,8 +87,8 @@ def test_fabric_not_assigned_option(example_dict_config):
     assert not hasattr(option1, '__name__')
     assert option1 is None
 
-@pytest.fixture
 
+@pytest.fixture
 def clean_fabric():
     TidenFabric().reset()
 
