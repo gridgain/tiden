@@ -1286,9 +1286,9 @@ def disable_connections_between_hosts(ssh, to_hosts, on_host):
     :param on_host: host for run iptables command
     """
     if to_hosts == on_host:
-        log_print(to_hosts != on_host, 'expect to_hosts: {} and on_host: {} diff'.format(to_hosts, on_host),
+        log_print('WARN: expect to_hosts: {} and on_host: {} diff'.format(to_hosts, on_host),
                   color='red')
-    log_print('Add iptables rules for disable connections on host: %s' % to_hosts, color='red')
+    log_print('Add iptables rules for disable connections on host: %s' % to_hosts, color='debug')
     cmd = []
     if isinstance(to_hosts, list):
         for host in set(to_hosts):
@@ -1297,7 +1297,7 @@ def disable_connections_between_hosts(ssh, to_hosts, on_host):
         cmd = _iptables_rule(to_hosts)
 
     results = ssh.exec_on_host(on_host, cmd)
-    log_print(results)
+    log_print(results, color='debug')
 
 
 def enable_connections_between_hosts(ssh, to_hosts, on_host):
@@ -1308,9 +1308,9 @@ def enable_connections_between_hosts(ssh, to_hosts, on_host):
     :param on_host: host for run iptables command
     """
     if to_hosts == on_host:
-        log_print(to_hosts != on_host, 'expect to_hosts: {} and on_host: {} diff'.format(to_hosts, on_host),
+        log_print('WARN: expect to_hosts: {} and on_host: {} diff'.format(to_hosts, on_host),
                   color='red')
-    log_print('Drop iptables rules for enable connections on host: %s' % to_hosts, color='red')
+    log_print('Drop iptables rules for enable connections on host: %s' % to_hosts, color='debug')
     cmd = []
     if isinstance(to_hosts, list):
         for host in set(to_hosts):
@@ -1319,7 +1319,7 @@ def enable_connections_between_hosts(ssh, to_hosts, on_host):
         cmd = _iptables_rule(to_hosts, add_rule=False)
     print_red(cmd)
     results = ssh.exec_on_host(on_host, cmd)
-    log_print(results)
+    log_print(results, color='debug')
 
 
 def _iptables_rule(host, add_rule=True):

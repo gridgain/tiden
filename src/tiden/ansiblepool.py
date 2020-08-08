@@ -138,7 +138,7 @@ class AnsiblePool(SshPool):
             env_vars = ''
             if self.config.get('env_vars'):
                 for env_var_name in self.config['env_vars'].keys():
-                    env_vars += "%s=%s;" % (env_var_name, self.config['env_vars'][env_var_name])
+                    env_vars += "export %s=\"%s\";" % (env_var_name, self.config['env_vars'][env_var_name])
             commands_per_host = {}
             for host in commands.keys():
                 commands_per_host[host] = ''
@@ -180,7 +180,7 @@ class AnsiblePool(SshPool):
         env_vars = ''
         if self.config.get('env_vars'):
             for env_var_name in self.config['env_vars'].keys():
-                env_vars += "%s=%s;" % (env_var_name, self.config['env_vars'][env_var_name])
+                env_vars += "export %s=\"%s\";" % (env_var_name, self.config['env_vars'][env_var_name])
         for command in commands:
             if env_vars != '':
                 command = "%s%s" % (env_vars, command)

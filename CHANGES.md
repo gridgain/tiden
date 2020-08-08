@@ -1,3 +1,9 @@
+#### *0.6.5.2* @ 2020-08-03
+* few fixes
+
+#### *0.6.5.1* @ 2020-07-16
+* fixed `environment.env_vars` propagation to remote hosts
+
 #### *0.6.5* @ 2020-07-15
 * changed `AppTestCase.get_app_by_type` to `AppTestCase.get_apps_by_type`
 * added `AppTestCase.add_apps_by_type`

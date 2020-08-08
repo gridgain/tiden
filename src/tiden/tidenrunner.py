@@ -434,6 +434,7 @@ class TidenRunner:
             test_params['repeated_test_count'] = repeat_count
             test_params['repeated_test_name'] = repeated_test_name
             test_params['continue_on_fail'] = self.config.get('repeated_test_continue_on_fail', False)
+            test_params['continue_on_pass'] = self.config.get('repeated_test_continue_on_pass', True)
         return test_params
 
     def _skip_tests(self):
@@ -464,6 +465,7 @@ class TidenRunner:
 
                 repeated_test_count = test_param.get('repeated_test_count', 1)
                 repeated_test_continue_on_fail = test_param.get('continue_on_fail')
+                repeated_test_continue_on_pass = test_param.get('continue_on_pass')
                 test_with_iterations = True if repeated_test_count > 1 else False
                 pad_string = self.__get_pad_string()
                 log_print("%s started (%s from %s)" % (pad_string, test_cnt, len(tests_to_execute)), color='yellow')
@@ -476,9 +478,11 @@ class TidenRunner:
 
                     test_status = self._run_test()
 
-                    if test_with_iterations and test_status != 'pass' and not repeated_test_continue_on_fail:
-                        self.result.update_test_name('{}_iteration_{}'.format(current_test, self.test_iteration + 1))
-                        break
+                    if test_with_iterations:
+                        if (test_status == 'pass' and not repeated_test_continue_on_pass) or \
+                                (test_status != 'pass' and not repeated_test_continue_on_fail):
+                            self.result.update_test_name(f'{current_test}_iteration_{self.test_iteration + 1}')
+                            break
         finally:
             self.current_test_name = None
             self.current_test_method = None
@@ -582,7 +586,7 @@ class TidenRunner:
                                               f'{files_receiver_url}/files/add'
                                         self.ssh_pool.exec_on_host(host_ip, [cmd])
             except:
-                log_print(f'Failed to send report. \n{format_exc()}', color='pink')
+                log_print(f'ERROR: Failed to send report. \n{format_exc()}', color='red')
 
     def __copy_resources_to_local_test_module_directory(self):
         """
@@ -632,7 +636,7 @@ class TidenRunner:
                     try:
                         self.__save_logs()
                     except:
-                        log_print(f'Failed to get logs\n{traceback.format_exc()}', color='pink')
+                        log_print(f'ERROR: Failed to get logs\n{traceback.format_exc()}', color='red')
 
                     # if exception in setup method then re-raise the exception as we should fail the test
                     if method_name == 'setup':
@@ -705,6 +709,7 @@ class TidenRunner:
         all_tests = self.test_plan[self.test_module].all_tests
         # cause of repeated_tests decorator
         if all_tests.get(test_method) and all_tests[test_method].get('repeated_test_name'):
+            self.config['rt']['test_iteration'] = self.test_iteration
             test_dir_name = '{}_{}'.format(
                 test_method_name,
                 all_tests[test_method].get('repeated_test_name')[self.test_iteration])
@@ -726,7 +731,7 @@ class TidenRunner:
             ]
             self.ssh_pool.exec(create_remote_dir)
         except Exception:
-            log_print("Can't create symlink to current test", color='red')
+            log_print("WARN: Can't create symlink to current test", color='red')
         self._save_config()
 
     def _check_test_for_skip(self):

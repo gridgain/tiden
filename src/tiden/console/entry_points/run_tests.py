@@ -44,7 +44,6 @@ class ConnectionMode(Enum):
 
 
 def create_parser():
-    # Parse command-line arguments
     parser = OptionParser(usage=SUPPRESS_USAGE, add_help_option=False)
     parser.add_option("--ts", action='store', default=None, help='Test suite name')
     parser.add_option("--tc", action='append', default=[], help='Test config file name(s)')
@@ -74,6 +73,7 @@ def process_args():
         'xunit_file': 'xunit.xml',
         'artifacts_hash': 'artifacts_hash.yaml'
     }
+    # Parse command-line arguments
     parser = create_parser()
     options, args = parser.parse_args()
     collect_only = options.collect_only
@@ -88,7 +88,7 @@ def process_args():
     for config_file in yaml_files:
         cur_data = read_yaml_file(config_file)
         if cur_data is None:
-            log_print(f"Configuration file {config_file} is empty", color='red')
+            log_print(f"WARN: Configuration file {config_file} is empty", color='red')
         for key_level_1 in cur_data.keys():
             if isinstance(cur_data[key_level_1], dict):
                 if not config.get(key_level_1):
@@ -105,9 +105,9 @@ def process_args():
                 config[key_level_1] = cur_data[key_level_1]
 
     if len(options.tc) > 0:
-        log_print(f"Read configuration from {', '.join(options.tc)}")
+        log_print(f"Read configuration from {', '.join(options.tc)}", color='debug')
     else:
-        log_print('No configurations found')
+        log_print('ERROR: No configurations found', color='red')
         exit(1)
 
     # Force property's config
@@ -292,8 +292,6 @@ def main():
     # initialize working directories
     pm = PluginManager(process_args())
     config = TidenFabric().setConfig(setup_test_environment(pm.do_filter('after_config_loaded', pm.config)[0])).obj
-    # pm.config = config
-    # pm.set(config=config)
     pm = PluginManager(config)
     log_print('The configuration stored in %s' % config['config_path'])
 

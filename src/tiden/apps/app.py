@@ -202,6 +202,7 @@ class App:
         """
         Kill nodes by pid
         :param args:    the list of nodes ids
+        :param signal:  signal (default -KILL)
         :return:        None
         """
         ids = []
@@ -221,6 +222,7 @@ class App:
                     cmd[host].append('nohup kill -%s %s >/dev/null 2>&1' % (str(int(signal)), self.nodes[id]['PID']))
                 else:
                     log_print(f'There is no PID for node {id}: already killed')
+                    self.nodes[id]['status'] = NodeStatus.KILLED
             else:
                 log_print(f'No node {id} in the grid to kill')
         return self.ssh.exec(cmd)
