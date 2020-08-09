@@ -89,8 +89,6 @@ class Ignite(IgniteComponents, App):
             # used by piclient and utilities
             self.client_ignite_home = None
 
-            self._parent_cls = kwargs.get('parent_cls', None)
-
             self.num_nodes = kwargs.get('num_nodes', Ignite._num_nodes)
 
             self._verbose = kwargs.get('verbose', Ignite._verbose)

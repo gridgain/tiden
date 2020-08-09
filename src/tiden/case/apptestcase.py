@@ -38,10 +38,10 @@ class AppTestCase:
         self.tiden: AppTestCaseContext = AppTestCaseContext()
 
     def add_app(self, app, **kwargs):
-        self.tiden.apps.add_app(app, **kwargs)
+        self.tiden.apps.add_app(app, parent_cls=self, **kwargs)
 
     def add_apps_by_type(self, app_type, **kwargs):
-        self.tiden.apps.add_apps_by_type(app_type, self.tiden.config['artifacts'], **kwargs)
+        self.tiden.apps.add_apps_by_type(app_type, self.tiden.config['artifacts'], parent_cls=self, **kwargs)
 
     def get_app(self, app_name: str) -> App:
         return self.tiden.apps.get_app(app_name)

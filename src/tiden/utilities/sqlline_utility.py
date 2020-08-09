@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from ..util import print_green
+from ..report.steps import step
 
 class Sqlline:
     def __init__(self, ignite, **kwargs):

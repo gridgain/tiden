@@ -35,6 +35,7 @@ class App:
     name = ''
     app_type = ''
     artifact_name = ''
+    _parent_cls = None
 
     def __init__(self, *args, **kwargs):
         # print('App.__init__')
@@ -52,6 +53,7 @@ class App:
             self.artifact_name = self.name
             if 'artifact_name' in kwargs and kwargs['artifact_name']:
                 self.artifact_name = kwargs['artifact_name']
+            self._parent_cls = kwargs.get('parent_cls', None)
 
     @classmethod
     def create_config_builder(cls, ssh, config):
