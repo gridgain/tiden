@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .base_utility import BaseUtility
 from .control_utility import ControlUtility
 from .sqlline_utility import Sqlline
 
 __all__ = [
+    "BaseUtility",
     "ControlUtility",
     "Sqlline",
 ]

@@ -50,7 +50,7 @@ class IgniteBinRestMixin(IgniteLogDataMixin):
     def get_control_utility(self):
         if self._cu is None:
             from tiden.utilities.control_utility import ControlUtility
-            self._cu = ControlUtility(self)
+            self._cu = ControlUtility(self, parent_cls=self._parent_cls)
         return self._cu
 
     cu = property(get_control_utility, None)

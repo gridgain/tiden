@@ -24,14 +24,13 @@ from ..tidenexception import TidenException
 from ..util import print_red, log_print, log_put, version_num
 from ..logger import get_logger
 from ..assertions import *
+from .base_utility import BaseUtility
 
 
-class ControlUtility:
+class ControlUtility(BaseUtility):
 
     def __init__(self, ignite, parent_cls=None):
-        self.ignite = ignite
-        self.latest_utility_output = None
-        self.latest_utility_host = None
+        super().__init__(ignite, parent_cls=parent_cls)
         self.commands = None
         self.auth_login = None
         self.auth_password = None
@@ -40,19 +39,18 @@ class ControlUtility:
         self.ssl_conn_tuple = None
         self.ignite_version = None
         self.ignite_version_num = None
-        self.latest_command = None
-        self._parent_cls = parent_cls
+
+    def get_ssh(self):
+        if hasattr(self.ignite, 'docker_ssh'):
+            return self.ignite.docker_ssh
+        return self.ignite.ssh
+
+    ssh = property(get_ssh, None)
 
     def enable_authentication(self, login, password):
         self.authentication_enabled = True
         self.auth_login = login
         self.auth_password = password
-
-    # def enable_ssl_connection(self, keystore_path, keystore_pass, truststore_path, truststore_pass):
-    #     ssl_config = namedtuple('ssl_conn', 'keystore_path keystore_pass truststore_path truststore_pass')
-    #     self.ssl_conn_tuple = ssl_config(keystore_path=keystore_path, keystore_pass=keystore_pass,
-    #                                             truststore_path=truststore_path, truststore_pass=truststore_pass)
-    #     self.ssl_connection_enabled = True
 
     def enable_ssl_connection(self, conn_tuple):
         self.ssl_conn_tuple = conn_tuple
@@ -117,7 +115,7 @@ class ControlUtility:
 
         nohup = ''
         if kwargs.get('background'):
-            print('In background mode')
+            log_print("In background mode")
             bg = f'> {kwargs["log"]} 2>&1 &'
             nohup = 'nohup'
         elif kwargs.get('log'):
@@ -139,22 +137,26 @@ class ControlUtility:
             ]
         }
 
-        ssh_options = kwargs.get('ssh_options', {})
         self.ignite.logger.debug(commands)
-        results = self.ignite.ssh.exec(commands, **ssh_options)
+        ssh_options = kwargs.get('ssh_options', {})
+
+        results = self.ssh.exec(commands, **ssh_options)
+
         if kwargs.get('log'):
             limit = ''
             if kwargs.get('output_limit'):
                 limit = f' | tail -n {kwargs["output_limit"]}'
-            lines = self.ignite.ssh.exec_on_host(client_host, [f'cat {kwargs["log"]}{limit}'])[client_host][0]
+            lines = self.ssh.exec_on_host(client_host, [f'cat {kwargs["log"]}{limit}'])[client_host][0]
         else:
             lines = results[client_host][0]
+
         if kwargs.get('show_output', True):
-            self.__print_control_utility_output(lines)
+            self.__print_utility_output(lines)
+
         self.latest_utility_output = lines
         self.latest_utility_host = client_host
         if kwargs.get('all_required'):
-            success = ControlUtility.check_content_all_required(
+            success = self.check_content_all_required(
                 lines, kwargs.get('all_required'),
                 maintain_order=kwargs.get('maintain_order', None),
                 escape=kwargs.get('escape', None)
@@ -179,7 +181,7 @@ class ControlUtility:
         ignite_home = self.ignite.nodes[nodes[0]]['ignite_home']
         ignite_host = self.ignite.nodes[nodes[0]]['host']
 
-        output = self.ignite.ssh.exec_on_host(ignite_host, ['cd {}; bin/control.sh --help'.format(ignite_home)])
+        output = self.ssh.exec_on_host(ignite_host, ['cd {}; bin/control.sh --help'.format(ignite_home)])
         if output[ignite_host]:
             output = output[ignite_host][0].split("\n")
             self.ssl_keys = {}
@@ -225,6 +227,7 @@ class ControlUtility:
             'kill transaction by xid': 'kill_tx',
             'print the current master key name': 'print_master_key',
             'change the master key': 'change_master_key',
+            # TODO: DR help requires additional parsing
         }
         for help_string, help_data in parsed_help.items():
             found = False
@@ -234,7 +237,7 @@ class ControlUtility:
                     found = True
                     break
             if not found:
-                log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='red')
+                log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='debug')
         return commands
 
     def __parse_help(self, output):
@@ -405,7 +408,7 @@ class ControlUtility:
                 )
             server_nodes_num += 1
         log_print(activate_commands, color='debug')
-        self.ignite.ssh.exec(activate_commands, **kwargs)
+        self.ssh.exec(activate_commands, **kwargs)
         activated_server_nodes_num = 0
         timeout_counter = 0
         log_put("Waiting %sd nodes: 0/%s" % (command, server_nodes_num))
@@ -565,7 +568,7 @@ class ControlUtility:
         else:
             cmd = 'cat {}'.format(file_path)
         print_red('Idle verify dump: %s' % cmd)
-        result = self.ignite.ssh.exec([cmd])
+        result = self.ssh.exec([cmd])
         for host, command_out in result.items():
             command_out = command_out[0]
             if 'No such file or directory' not in command_out and command_out != '':
@@ -612,85 +615,6 @@ class ControlUtility:
                 structure = {}
 
         return result_list
-
-    @staticmethod
-    def __print_control_utility_output(output):
-        for line in output.split('\n'):
-            log_print(line)
-
-    @staticmethod
-    def check_content_all_required(buff, lines_to_search, maintain_order=False, escape=None):
-        """
-        This method checks the all lines in lines_to_search list could be found in buff. If not then exception
-        TidenException will be risen.
-
-        :param buff:
-        :param lines_to_search:
-        :return:
-        """
-        import re
-        search_in = [line for line in buff.split('\n') if line]
-        if escape:
-            escape_from_search = []
-            for item_to_escape in escape:
-                tmp_ = [line for line in search_in if item_to_escape in line]
-                escape_from_search += tmp_
-            if escape_from_search:
-                search_in = [item for item in search_in if item not in escape_from_search]
-
-        search_for = list(lines_to_search)
-        found = []
-        result = True
-
-        if maintain_order:
-            search_left = search_for.copy()
-            for line in search_in:
-                if len(search_left) <= 0:
-                    break
-                cur_search_for = search_left[0]
-                m = re.search(cur_search_for, line)
-                if m:
-                    found.append(cur_search_for)
-                    search_left = search_left[1:]
-
-        else:
-            for line_to_search in search_for:
-                for line in search_in:
-                    m = re.search(line_to_search, line)
-                    if m:
-                        found.append(line_to_search)
-                        break
-        if len(search_for) != len(found):
-            get_logger('tiden').debug('Searching \n%s \nand found: \n%s \nin buffer \n%s'
-                                      % ('\n'.join(search_for), '\n'.join(found), '\n'.join(search_in)))
-            if len(search_for) > len(found):
-                raise TidenException('Searching \n%s \nand found: \n%s \nin buffer \n%s.\nCan\'t find:\n%s'
-                                 % ('\n'.join(search_for),
-                                    '\n'.join(found),
-                                    '\n'.join(search_in),
-                                    set(search_for).difference(set(found))))
-            else:
-                raise TidenException('Searching \n%s \nand found: \n%s \nin buffer \n%s.\nFound additional items:\n%s'
-                                     % ('\n'.join(search_for),
-                                        '\n'.join(found),
-                                        '\n'.join(search_in),
-                                        set(found).difference(set(search_for))))
-        return result
-
-    @staticmethod
-    def _print_snapshot_utility_output(output, start_msg, stop_msg):
-        success, include_in_log = False, False
-        for line in output.split('\n'):
-            if line.startswith(start_msg):
-                include_in_log = True
-            if include_in_log:
-                log_print(line)
-            if stop_msg in line:
-                log_print(line)
-                include_in_log = False
-                if 'successfully finished' in line:
-                    success = True
-        return success
 
     def check_all_msgs_in_utility_output(self, lines_to_search):
         utility_output = self.latest_utility_output.split('\n')
@@ -854,7 +778,7 @@ class ControlUtility:
             self.control_utility(*args)
             sleep(5)
         else:
-            log_print('Could not disable baseline autoajustment as it is not supported'.
+            log_print('ERROR: Could not disable baseline auto-adjustment as it is not supported'.
                       format('disable' if disable else 'enable'), color='red')
 
     def get_auto_baseline_params(self):
@@ -873,122 +797,8 @@ class ControlUtility:
                 soft_timeout = int(m.group(1))
         return status, soft_timeout
 
-    def dr(self):
-        return DRControlUtility(self.ignite, self.latest_utility_output, self.latest_command)
+    def __print_utility_output(self, output):
+        for line in output.split('\n'):
+            log_print(line)
 
-
-class DRControlUtilityException(Exception):
-    pass
-
-
-class DRControlUtility(ControlUtility):
-
-    def __init__(self, ignite, latest_output, latest_command):
-        ControlUtility.__init__(self, ignite)
-        self.latest_utility_output = latest_output
-        self.latest_command = latest_command
-        common_commands = {'dc_id': r'Data Center ID: (\d+)'}
-        self.commands = {
-            'state': {
-                'sender_groups': r'Configured sender group\(s\).+\[(.+)\]',
-                'receiver_caches': r'Configured (\d+) receiver cache\(s\)\.',
-                **common_commands
-            },
-            'topology': {
-
-                'topology': r'Topology: (\d+) server\(s\), (\d+) client\(s\)',
-                'node_info_multiline': r'nodeId=(.+), Address=\[(.+)\]$',
-                'sender_hubs_info_multiline': r'nodeId=(.+), Address=\[(.+)\], Mode=(.+)',
-                'receiver_hubs_info_multiline': r'nodeId=(.+), Address=(?!\[)(.+)(?!\]), Mode=(.+)',
-                'sender_count': r'Sender hubs: (\d+)',
-                'receiver_count': r'Receiver hubs: (\d+)',
-                'other_nodes': r'Other nodes: (.+)',
-                'data_nodes_count': r'Data nodes: (.+)',
-                **common_commands
-            },
-            'node': {
-                'addresses': r'Node addresses: \[(.+)\]',
-                'mode': r'Mode=(.+)',
-                'streamer_pool_size': r'StreamerThreadPoolSize=(\d+)',
-                'thread_pool_size': r'\s+ThreadPoolSize=(\d+)',
-                **common_commands
-            },
-            'full-state-transfer': {
-                'transferred_caches': r'Full state transfer command completed successfully for caches \[(.+)\]',
-                **common_commands
-            },
-            'cache': {
-                'caches_affected': r'(\d+) matching cache\(s\): \[(.+)\]',
-                'sender_metrics_multiline': r'Sender metrics for cache \"(.+)\":',
-                'receiver_metrics_multiline': r'Receiver metrics for cache \"(.+)\":',
-                'receiver_configuration_multiline': r'Receiver configuration for cache \"(.+)\":',
-                'sender_configuration_multiline': r'Sender configuration for cache \"(.+)\":',
-                **common_commands
-            },
-            'pause': {
-                **common_commands
-            },
-            'resume': {
-                **common_commands
-            }
-        }
-
-    def parse(self):
-        """
-        Assert command execution (finished with 0 code)
-        Parse latest output with regexes related to latest command
-
-        Result for 'cache' on master cluster with DR on servers looks like:
-        {'dc_id': '1',
-         'caches_affected': [
-            '120',
-            'cache_group_1_001, cache_group_1_002, cache_group_1_003, ...'
-         ],
-         'receiver_configuration': [
-            ['cache_group_1_001'],
-            ['cache_group_1_002'],
-            ['cache_group_1_003'],
-            ...
-         ],
-         'sender_configuration': [
-            ['cache_group_1_001'],
-            ['cache_group_1_002'],
-            ['cache_group_1_003'],
-            ...
-         ]}
-        """
-        result = {}
-        if 'finished with code: 0' not in self.latest_utility_output:
-            self.ignite.logger.debug(self.latest_utility_output)
-            raise DRControlUtilityException(f'Command control.sh {" ".join(self.latest_command)} executed with exception')
-
-        for line in self.latest_utility_output.split('\n'):
-            for name, pattern in self.commands[self.latest_command[1]].items():
-                found = search(pattern, line)
-                multiline = False
-                if name.endswith('_multiline'):
-                    name = name[:-10]
-                    multiline = True
-                if found:
-                    found_list = list(found.groups())
-                    if result.get(name):
-                        if multiline:
-                            result[name] = result[name] + [found_list]
-                        else:
-                            raise TidenException(f'Many times found {name} pattern')
-                    else:
-                        if multiline:
-                            result[name] = [found_list]
-                        else:
-                            if len(found_list) == 1:
-                                found_list = found_list[0]
-                            result[name] = found_list
-
-        sorted_result = {}
-        for k, v in result.items():
-            if isinstance(v, list) and isinstance(v[0], list):
-                sorted_result[k] = sorted(v)
-            else:
-                sorted_result[k] = v
-        return sorted_result
 

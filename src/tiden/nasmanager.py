@@ -124,7 +124,7 @@ class NasManager:
                   'fi && echo "Done"'.format(ss=snapshot_storage)
         print_blue('Going to remove shared storage: %s.' % snapshot_storage)
         result = self.ssh.exec([command], timeout=self.folder_remove_timeout)
-        log_print(result)
+        log_print(result, color='debug')
         return 'Done' in result[self.share_host][0]
 
     def create_shared_folder(self, folder, cleanup=True):
@@ -184,5 +184,5 @@ class NasManager:
         command = 'rm -f {sf}; ' \
                   'echo "Result code: $?";'.format(sf=shared_file)
         result = self.ssh.exec([command])
-        log_print(result)
+        log_print(result, color='debug')
 

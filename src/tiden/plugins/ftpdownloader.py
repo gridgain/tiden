@@ -39,12 +39,13 @@ class FtpDownloader(TidenPlugin):
         else:
             raise TidenPluginException('FTP credentials have not found in FtpDownloader plugin configuration.')
 
+    def before_prepare_artifacts(self, *args, **kwargs):
         for artifact_name, artifact in self.config['artifacts'].items():
             # artifact = self.config['artifacts'][artifact_name]
 
             if artifact['glob_path'].startswith('ftp'):
                 log_print('Artifact {} ({}) will be downloaded from FTP'.
-                          format(artifact_name, artifact['glob_path']), color='blue')
+                          format(artifact_name, artifact['glob_path']), color='green')
 
                 self.artifacts[artifact_name] = {
                     'file_name': artifact['glob_path'].split('/')[-1],
@@ -64,7 +65,7 @@ class FtpDownloader(TidenPlugin):
 
             else:
                 log_print('Artifact {} ({}) will be uploaded from local host'.
-                          format(artifact_name, artifact['glob_path']), color='blue')
+                          format(artifact_name, artifact['glob_path']), color='green')
                 continue
 
     def after_hosts_setup(self, *args, **kwargs):

@@ -15,12 +15,16 @@
 # limitations under the License.
 
 from ..util import print_green
+from ..report.steps import step
 
 
 class Sqlline:
     def __init__(self, ignite, **kwargs):
         self.ignite = ignite
         self.conn_params = ''
+        self._parent_cls = kwargs.get('parent_cls', None)
+        if not self._parent_cls:
+            self._parent_cls = ignite._parent_cls
 
         if kwargs.get('ssl_connection'):
             ssl_conn_tuple = kwargs.get('ssl_connection')
@@ -39,6 +43,7 @@ class Sqlline:
             auth_info = kwargs.get('auth')
             self.conn_params += '&user={}&password={}'.format(auth_info.user, auth_info.password)
 
+    @step('Run Sqlline', attach_parameters=True)
     def run_sqlline(self, sql_commands, driver_flags=None, log=True):
         set_java_home = ''
         node_id = self.ignite.get_alive_default_nodes()[0]

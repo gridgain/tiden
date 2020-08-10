@@ -41,7 +41,7 @@ class DockerManager:
         Delete all containers from all hosts
         """
         self.running_containers = {}
-        log_print("Remove all running containers")
+        log_print("Remove all containers")
         cmd = "docker rm -f $(docker ps -aq)"
         self.ssh.exec([cmd])
 
@@ -70,7 +70,7 @@ class DockerManager:
         self.remove_all_containers()
         self.prune()
 
-    def get_containers_info(self, additional_key=''):
+    def get_containers_info(self, additional_key='', host=None):
         """
         Get information about all running container for all hosts
 
@@ -81,9 +81,13 @@ class DockerManager:
                             "name": container name
                         }, ...)
         """
-        res = self.ssh.exec([
+        cmd = [
             'docker ps --format "{{.ID}} | {{.Image}} | {{.Status}} | {{.Names}} | {{.Ports}}" '+additional_key + ' -a'
-        ])
+        ]
+        if host:
+            res = self.ssh.exec_on_host(host, cmd)
+        else:
+            res = self.ssh.exec(cmd)
         running_containers = {}
         for host, out in res.items():
             rows = out[0].split("\n")[:-1]
@@ -107,7 +111,7 @@ class DockerManager:
 
     def get_running_containers(self, host=None, predicate=lambda x: True):
         all_running_containers = dict()
-        containers = self.get_containers_info()
+        containers = self.get_containers_info(host=host)
         # get running containers
         for current_host in containers.keys():
             running_containers = [container for container in containers.get(current_host)
@@ -117,7 +121,7 @@ class DockerManager:
 
         return all_running_containers if not host else all_running_containers.get(host)
 
-    def remove_containers(self, host=None, name=None, name_pattern=None, image_name=None):
+    def remove_containers(self, host=None, name=None, name_pattern=None, image_name=None, hosts_containers=None):
         """
         Remove containers from host
         :param host:                host with expected containers  (otherwise containers will be searching on all hosts)
@@ -125,9 +129,10 @@ class DockerManager:
         :param name_pattern:        name pattern
         :return:                    list: removed containers
         """
-        hosts = self.get_containers_info()
+        if not hosts_containers:
+            hosts_containers = self.get_containers_info(host=host)
         removed_containers = []
-        for _host, containers in hosts.items():
+        for _host, containers in hosts_containers.items():
             if host is not None and _host != host:
                 continue
             for container in containers:
@@ -220,7 +225,36 @@ class DockerManager:
         cmd = f'docker build {path}'
         if 'tag' in kwargs:
             cmd += f" -t {kwargs['tag']}"
-        self.ssh.exec_on_host(host, [cmd])
+        if 'file' in kwargs:
+            cmd += f" -f {kwargs['file']}"
+        return self.ssh.exec_on_host(host, [cmd])
+
+    def list_images(self, host=None):
+        images = {}
+        cmd = 'docker images --format "{{.ID}};{{.Repository}};{{.Tag}}"'
+        if host:
+            output = self.ssh.exec_on_host(host, [cmd])
+        else:
+            output = self.ssh.exec([cmd])
+        for host, out in output.items():
+            rows = out[0].strip().split('\n')
+            for row in filter(lambda s: len(s) > 0, rows):
+                (id, repo, tag) = row.split(';')
+                if host not in images.keys():
+                    images[host] = {}
+                name = f'{repo}:{tag}'
+                images[host][name] = {
+                    'id': id,
+                    'name': name,
+                    'repository': repo,
+                    'tag': tag
+                }
+
+        return images
+
+    def is_image_exist(self, host, name):
+        images = self.list_images(host)
+        return bool(self.find(images, lambda image: image['name'] == name))
 
     def restart_container(self, host, container):
         cmd = f'docker restart {container}'
@@ -301,14 +335,14 @@ class DockerManager:
                                  image=image,
                                  commands=commands)
 
-        log_print("Running container '{}' from image '{}' on {}".format(container_name, image_name, host))
+        log_print("Starting container '{}' from image '{}' on {}".format(container_name, image_name, host))
+        log_print(f"Cmd: {cmd}", color='debug')
         output = self.ssh.exec_on_host(host, [cmd])[host]
         if len(output) != 1:
             raise AssertionError("Can't run image {} on host:\n{}".format(image_name, host, "".join(output)))
 
-        last_line = output[-1:][0]
-        image_id = last_line.replace("\n", "")
-        assert len(image_id) > 30, "Image ID is not correct: '{}'".format(image_id)
+        image_id = output[-1:][0].strip().splitlines()[-1:][0]
+        assert len(image_id) > 32 and match(r'^[a-f0-9]*$', image_id), "Image ID is not correct: '{}'".format(image_id)
 
         # log container output
         log_file = kwargs.get('log_file', "{}/{}.log".format(self.config["rt"]["remote"]["test_dir"], container_name))
@@ -318,7 +352,6 @@ class DockerManager:
 
     def log_container_output(self, host, image_id, log_file):
         logs_dir = self.config["rt"]["remote"]["test_dir"]
-        # log_file = "{}/{}".format(logs_dir, log_file)
         write_logs_command = "cd {log_dir}; " \
                              "nohup " \
                              "  docker logs -f {image} " \
@@ -541,7 +574,9 @@ class DockerManager:
             if add_manager_init_com is None:
                 self.swarm_manager = host
                 swarm_init_res = self.ssh.exec_on_host(host, [init_cmd])
-                clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
+                clear_res = []
+                if swarm_init_res and host in swarm_init_res and type(swarm_init_res[host]) == type([]):
+                    clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
                 assert [line for line in clear_res if 'Swarm initialized' in line],\
                     'Failed to initialize swarm on {}: {}'.format(host, ' '.join(clear_res))
                 add_manager_init_com = [line for line in clear_res if line.startswith('docker')]

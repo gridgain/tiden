@@ -30,7 +30,7 @@ class Profiler(App):
                    "settings={JFC_PATH}"
     available_profilers = ('jfr', 'async_flamegraph')
 
-    def __init__(self, name, config, ssh, profiler=''):
+    def __init__(self, name, config, ssh, profiler='', **kwargs):
         super().__init__(name, config, ssh, app_type='profiler')
         self.type = self.config['environment'].get('yardstick', {}).get('profiler')
         if not self.type:

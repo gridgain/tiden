@@ -46,8 +46,8 @@ def c_time(path):
     """
     return getmtime(path)
 
-@fixture
 
+@fixture
 def temp_dir(tmpdir_factory):
     fn = tmpdir_factory.mktemp("var")
     global var_dir
@@ -252,8 +252,8 @@ def make_local_structure(custom_config, exclude_property_dirs=None):
             del custom_config[exclude_property_dir]
     return custom_config
 
-@fixture
 
+@fixture
 def prepare_test_artifacts():
     global prepare_artifacts_result
     global config
@@ -264,8 +264,8 @@ def prepare_test_artifacts():
     # execute artifacts preparation
     prepare_artifacts_result, config = prepare(config)
 
-@fixture
 
+@fixture
 def prepare_without_local_structure():
     global config
     config = make_local_structure({}, exclude_property_dirs=['artifacts_dir', 'suite_var_dir', 'tmp_dir'])
@@ -281,8 +281,8 @@ def prepare_without_local_structure():
     }
     config.update(additional_configs)
 
-@fixture
 
+@fixture
 def prepare_remote_structure():
     global config
     config = {"clean": None}
@@ -295,8 +295,8 @@ def prepare_remote_structure():
     }
     config["ssh"].update(ssh_config)
 
-@fixture
 
+@fixture
 def prepare_artifacts_with_ssh_structure():
     global config
     global prepare_artifacts_result
@@ -313,8 +313,8 @@ def prepare_artifacts_with_ssh_structure():
     }
     config["ssh"].update(ssh_config)
 
-@fixture
 
+@fixture
 def simple_structure():
     global config
     global prepare_artifacts_result
