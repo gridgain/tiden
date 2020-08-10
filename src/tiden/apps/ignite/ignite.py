@@ -891,9 +891,7 @@ class Ignite(IgniteComponents, App):
         if not node_idx:
             alive_nodes = self.get_alive_additional_nodes() + self.get_alive_default_nodes()
         else:
-            alive_nodes = node_idx
-            if type(node_idx) != type([]):
-                alive_nodes = [node_idx]
+            alive_nodes = node_idx if type(node_idx) == type([]) else [node_idx]
         server_num = len(alive_nodes)
         log_put("Stop grid: running server nodes: %s/%s" % (str(server_num), str(server_num)))
         # self.ssh.killall('java')
