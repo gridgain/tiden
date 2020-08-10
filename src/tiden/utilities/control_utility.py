@@ -24,6 +24,7 @@ from ..tidenexception import TidenException
 from ..util import print_red, log_print, log_put, version_num
 from ..logger import get_logger
 from ..assertions import *
+from .base_utility import BaseUtility
 
 
 class ControlUtility(BaseUtility):
