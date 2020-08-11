@@ -20,7 +20,7 @@ from os.path import exists
 
 from datetime import datetime
 from itertools import cycle
-from re import search
+from re import search, compile
 from time import sleep, time
 from traceback import format_exc
 from zipfile import ZipFile
@@ -1353,7 +1353,7 @@ class Ignite(IgniteComponents, App):
                     ],
         """
         if start_line_patterns is None:
-            start_line_patterns = re.compile(
+            start_line_patterns = compile(
                 "^((Caused by:* )*class [a-zA-Z0-9\._]+Exception: "
                 "|java.lang.NullPointerException"
                 "|java.lang.[a-zA-Z0-9\._]+(Exception"
@@ -1366,12 +1366,13 @@ class Ignite(IgniteComponents, App):
             )
 
         if end_line_patterns is None:
-            end_line_patterns = re.compile(
+            end_line_patterns = compile(
                 "\.\.\. \d+ more|"
                 'at java\.lang\.Thread\.run\(Thread\.java:\d+\)|'
                 'at org.apache.ignite.startup.cmdline.CommandLineStartup.main\(CommandLineStartup.java:\d+\)|'
                 'at org\.apache\.ignite.spi.IgniteSpiThread\.run\(IgniteSpiThread\.java:\d+\)|'
-                'at org\.apache\.ignite\.testtools\.SimpleIgniteTestClient\.main\(SimpleIgniteTestClient\.java:\d+\)'
+                'at org\.apache\.ignite\.testtools\.SimpleIgniteTestClient\.main\(SimpleIgniteTestClient\.java:\d+\)|'
+                '\[[0-9:,]+\]\[INFO\]'
             )
 
         exception_lines = []
@@ -1381,12 +1382,13 @@ class Ignite(IgniteComponents, App):
         in_exception_section = False
         lines = file_content
         lines_count = len(lines)
+        max_lines_stack_trace = 100
 
         start_line = 0
 
         for line_idx, line in enumerate(lines):
             if in_exception_section:
-                if search(end_line_patterns, line):
+                if search(end_line_patterns, line) or line_idx - start_line > max_lines_stack_trace:
                     in_exception_section = False
                     after_exception_end_line = True
                     exception_lines.append(line.rstrip())
