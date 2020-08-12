@@ -1,3 +1,11 @@
+#### *0.6.5.4* @ 2020-08-03
+* added `__main__` to `tiden.console.main` to interactive debugger compatibility
+
+#### *0.6.5.3* @ 2020-08-03
+* added `parent_cls` to `App.__init__` (to allow use of `@step` on application methods)
+* fixes in `DockerManager`
+* extracted common code from `ControlUtility` to `BaseUtility`
+
 #### *0.6.5.2* @ 2020-08-03
 * few fixes
 

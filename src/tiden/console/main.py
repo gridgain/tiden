@@ -72,3 +72,6 @@ def main():
         log_print(f'ERROR: Can\'t find module {cmd} entry point', color='red')
     with patch.object(sys, 'argv', args):
         module.main()
+
+if __name__=="__main__":
+    main()
