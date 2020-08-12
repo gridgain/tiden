@@ -54,7 +54,7 @@ class App:
             self.artifact_name = self.name
             if 'artifact_name' in kwargs and kwargs['artifact_name']:
                 self.artifact_name = kwargs['artifact_name']
-            self.artifact_config = self.config['artifacts'].get(self.artifact_name)
+            self.artifact_config = self.config.get('artifacts', {}).get(self.artifact_name, None)
             self._parent_cls = kwargs.get('parent_cls', None)
 
     @classmethod
