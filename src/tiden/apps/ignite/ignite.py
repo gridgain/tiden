@@ -1664,3 +1664,6 @@ class Ignite(IgniteComponents, App):
             else:
                 log_print(f'cannot remove running additional node {node_id}', color='red')
 
+    def get_ignite_version(self):
+        assert self.artifact_config, f"{self.__class__.__name__} application had been created without artifact"
+        return self.artifact_config.get('ignite_version')

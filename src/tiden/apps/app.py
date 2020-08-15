@@ -35,6 +35,7 @@ class App:
     name = ''
     app_type = ''
     artifact_name = ''
+    artifact_config = None
     _parent_cls = None
 
     def __init__(self, *args, **kwargs):
@@ -53,6 +54,7 @@ class App:
             self.artifact_name = self.name
             if 'artifact_name' in kwargs and kwargs['artifact_name']:
                 self.artifact_name = kwargs['artifact_name']
+            self.artifact_config = self.config.get('artifacts', {}).get(self.artifact_name, None)
             self._parent_cls = kwargs.get('parent_cls', None)
 
     @classmethod
