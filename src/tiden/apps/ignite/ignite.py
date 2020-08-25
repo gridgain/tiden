@@ -1285,9 +1285,11 @@ class Ignite(IgniteComponents, App):
         local_files = []
         try:
             found_exceptions = {}
+            last_host = None
             for file_to_check in files_to_check:
                 local_file_path = path.join(store_files, file_to_check['name'])
                 local_files.append(local_file_path)
+                last_host = file_to_check['host']
                 self.ssh.download_from_host(file_to_check['host'], file_to_check['log_path'], local_file_path)
                 with open(local_file_path, 'r') as f:
                     all_lines = f.readlines()
@@ -1299,7 +1301,8 @@ class Ignite(IgniteComponents, App):
                             'body': all_lines
                         }
 
-            now_time = datetime.now()
+            res = self.ssh.exec_on_host(last_host, ['date +"%H:%M:%S %d-%m-%Y"'])[last_host][0]
+            now_time = datetime.strptime(res.strip('\n'), '%H:%M:%S %d-%m-%Y')
             format_date_now = f'{now_time.year}.{now_time.month}.{now_time.day}'
             for file_name, found_exception in deepcopy(found_exceptions).items():
                 for ex_idx, exception_info in enumerate(found_exception['exceptions']):
