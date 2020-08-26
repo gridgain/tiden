@@ -1231,7 +1231,8 @@ class Ignite(IgniteComponents, App):
                    files_to_check: list = None,
                    store_files=None,
                    time_pattern=r'\[(\d+:\d+:\d+)(,\d+|)\]|T(\d+:\d+:\d+)(\.\d+|)',
-                   ignore_node_ids=False):
+                   ignore_node_ids=False,
+                   time_modify: callable=None):
         """
         Download log files one by one
         Find fails in cluster logs and form it as dict
@@ -1303,6 +1304,8 @@ class Ignite(IgniteComponents, App):
 
             res = self.ssh.exec_on_host(last_host, ['date +"%H:%M:%S %d-%m-%Y"'])[last_host][0]
             now_time = datetime.strptime(res.strip('\n'), '%H:%M:%S %d-%m-%Y')
+            if time_modify:
+                now_time = time_modify(now_time)
             format_date_now = f'{now_time.year}.{now_time.month}.{now_time.day}'
             for file_name, found_exception in deepcopy(found_exceptions).items():
                 for ex_idx, exception_info in enumerate(found_exception['exceptions']):
