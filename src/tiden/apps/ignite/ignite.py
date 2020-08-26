@@ -1285,11 +1285,9 @@ class Ignite(IgniteComponents, App):
         local_files = []
         try:
             found_exceptions = {}
-            last_host = None
             for file_to_check in files_to_check:
                 local_file_path = path.join(store_files, file_to_check['name'])
                 local_files.append(local_file_path)
-                last_host = file_to_check['host']
                 self.ssh.download_from_host(file_to_check['host'], file_to_check['log_path'], local_file_path)
                 with open(local_file_path, 'r') as f:
                     all_lines = f.readlines()
