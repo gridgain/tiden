@@ -1301,8 +1301,7 @@ class Ignite(IgniteComponents, App):
                             'body': all_lines
                         }
 
-            res = self.ssh.exec_on_host(last_host, ['date +"%H:%M:%S %d-%m-%Y"'])[last_host][0]
-            now_time = datetime.strptime(res.strip('\n'), '%H:%M:%S %d-%m-%Y')
+            now_time = datetime.now()
             format_date_now = f'{now_time.year}.{now_time.month}.{now_time.day}'
             for file_name, found_exception in deepcopy(found_exceptions).items():
                 for ex_idx, exception_info in enumerate(found_exception['exceptions']):
