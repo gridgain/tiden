@@ -1230,7 +1230,7 @@ class Ignite(IgniteComponents, App):
     def find_fails(self, *node_ids,
                    files_to_check: list = None,
                    store_files=None,
-                   time_pattern=r'\[(\d+:\d+:\d+)(,\d+|)\]|T(\d+:\d+:\d+)(\.\d+|)',
+                   time_pattern=r'\[(\d+:\d+:\d+)(,\d+|)\]|Time.+T(\d+:\d+:\d+)(\.\d+|)',
                    ignore_node_ids=False):
         """
         Download log files one by one
@@ -1312,7 +1312,6 @@ class Ignite(IgniteComponents, App):
                             time_is_found = True
                             found_time_str = found_time_str.group(1) or found_time_str.group(3)
                             found_time = datetime.strptime(f'{format_date_now} {found_time_str}', '%Y.%m.%d %H:%M:%S')
-                            log_print(f'found time: {found_time} : {found_time.isoformat()} : {found_time.timestamp()}')
                             found_exceptions[file_name]['exceptions'][ex_idx]['time'] = found_time
                             break
                     if not time_is_found:
@@ -1326,7 +1325,6 @@ class Ignite(IgniteComponents, App):
                             if found_time_str and (found_time_str.group(1) or found_time_str.group(3)):
                                 found_time_str = found_time_str.group(1) or found_time_str.group(3)
                                 found_time = datetime.strptime(f'{format_date_now} {found_time_str}', '%Y.%m.%d %H:%M:%S')
-                                log_print(f'not found time: {found_time} : {found_time.isoformat()} : {found_time.timestamp()}')
                                 found_exceptions[file_name]['exceptions'][ex_idx]['time'] = found_time
                                 break
         finally:
