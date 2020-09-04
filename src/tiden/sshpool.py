@@ -432,19 +432,22 @@ class SshPool(AbstractSshPool):
         pool.close()
         pool.join()
 
-    def not_uploaded(self, files, remote_path):
+    def not_uploaded(self, files, remote_path, hosts=None):
         outdated = []
         for file in files:
             file_name = path.basename(file)
             local_md5 = md5(open(file, 'rb').read()).hexdigest()
-            remote_file = "%s/%s" % (remote_path, file_name)
-            results = self.exec(['md5sum %s' % remote_file])
+            remote_file = f"{remote_path}/{file_name}"
+            if hosts:
+                results = self.exec(dict([(host, [f'md5sum {remote_file}']) for host in hosts]))
+            else:
+                results = self.exec([f'md5sum {remote_file}'])
+
             matched_count = 0
             for host in results.keys():
-                if len(results[host]) > 0:
-                    if '%s ' % local_md5 in results[host][0]:
-                        matched_count += 1
-            if matched_count < len(results.keys()):
+                if results[host] and str(local_md5) in results[host][0]:
+                    matched_count += 1
+            if matched_count < (len(hosts) if hosts else 0 or len(self.hosts)):
                 outdated.append(file)
         return outdated
 

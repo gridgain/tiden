@@ -264,9 +264,10 @@ def repack_and_get_command_to_unzip(previous_artifacts_config, copied_artifacts,
 
             # set paths
 
-            log_print("%s -> %s" % (artifact_name, new_file))
+            log_print(f"{artifact_name} -> {new_file}")
 
             config_changes[artifact_name]['path'] = new_file
+            config_changes[artifact_name]['upload_scope'] = config['artifacts'][artifact_name].get('upload_scope')
             config_changes[artifact_name]['remote_path'] = "{}/{}".format(config['remote']['artifacts_dir'],
                                                                           basename(new_file))
             if config['artifacts'][artifact_name].get('remote_unzip') is True:
@@ -278,7 +279,7 @@ def repack_and_get_command_to_unzip(previous_artifacts_config, copied_artifacts,
                 config_changes[artifact_name]['remote_path'] = remote_path
 
         if config_changes[artifact_name].get('path') is None:
-            log_print("Artifact %s not found" % artifact_name)
+            log_print(f"Artifact {artifact_name} not found")
             exit(1)
     return command, config_changes, artifacts_to_delete
 

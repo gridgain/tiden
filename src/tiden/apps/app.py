@@ -45,7 +45,7 @@ class App:
         else:
             name, config, ssh = args[0], args[1], args[2]
             self.config = config
-            self.ssh: SshPool = ssh
+            self.ssh = ssh
             self.nodes = {}
             self.app_type = None
             self.name = name

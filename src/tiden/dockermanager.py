@@ -45,15 +45,6 @@ class DockerManager:
         cmd = "docker rm -f $(docker ps -aq)"
         self.ssh.exec([cmd])
 
-    def kill_running_containers(self):
-        """
-        Kill running containers from all hosts
-        """
-        self.running_containers = {}
-        log_print("Kill running containers")
-        cmd = "docker kill $(docker ps -q)"
-        self.ssh.exec([cmd])
-
     def prune(self):
         """
         Delete all images/caches/networks from all hosts
@@ -685,7 +676,7 @@ class DockerManager:
         if running:
             if need_stop:
                 log_print('Going to terminate those dockers containers!', color='red')
-                self.kill_running_containers()
+                self.remove_all_containers()
                 running, _ = self.get_all_containers()
                 if not len(running):
                     log_print('all containers removed successfully', color='green')

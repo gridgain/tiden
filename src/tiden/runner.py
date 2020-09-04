@@ -291,12 +291,30 @@ def upload_artifacts(ssh_pool, config, remote_unzip_files):
     :return:''
     """
     log_print("*** Deploy artifacts ***", color='blue')
-    log_print('Preliminary file list for upload: %s' % ', '.join(listdir(config['artifacts_dir'])))
+    log_print(f'Preliminary file list for upload: {", ".join(listdir(config["artifacts_dir"]))}')
     log_print('Exclude already uploaded files')
     remote_artifacts = config['remote']['artifacts_dir']
-    files = ssh_pool.not_uploaded(glob("%s/*" % config['artifacts_dir']), remote_artifacts)
+    files = ssh_pool.not_uploaded(glob(f"{config['artifacts_dir']}/*"), remote_artifacts)
     if len(files) > 0:
-        log_print('Final file list for upload: %s' % ', '.join(files))
+        for file in files:
+            artifact = list(filter(lambda art: art.get('path') == file, config['artifacts'].values()))
+            if artifact and artifact[0].get('path'):
+                artifact = artifact[0]
+                scope = artifact.get('upload_scope')
+                if scope:
+                    if scope == 'server':
+                        hosts = config['environment']['server_hosts']
+                    elif scope == 'client':
+                        hosts = config['environment']['client_hosts']
+                    else:
+                        break
+                    not_uploaded_files = ssh_pool.not_uploaded([file], remote_artifacts, hosts=hosts)
+                    if not_uploaded_files:
+                        log_print(f'Final files for upload on {scope} scope: {", ".join(not_uploaded_files)}')
+                        ssh_pool.upload_for_hosts(hosts, not_uploaded_files, remote_artifacts)
+                    files = [f for f in files if f != file]
+
+        log_print(f'Final file list for upload: {", ".join(files)}')
         ssh_pool.upload(files, remote_artifacts)
     else:
         log_print('Nothing found for upload')
