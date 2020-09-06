@@ -50,9 +50,13 @@ class EnvExpander(TidenPlugin):
         else:
             orig_vars = {}
             for var_name in self.expand_var_names:
+                if not var_name in env:
+                    continue
                 orig_vars[var_name] = env[var_name]
                 del env[var_name]
             for var_name in self.expand_var_names:
+                if not var_name in environ:
+                    continue
                 var_value = environ.get(var_name, '')
                 var_values = var_value.split(',')
                 output_config = {}
@@ -77,8 +81,18 @@ class EnvExpander(TidenPlugin):
             output_config[new_section_name] = self._patch_section(section_data, env)
 
     def _compute_env(self, input_config, env):
+        if type(self.compute_vars) != type({}):
+            log_print(f'WARN: compute_vars must be dictionary', color='red')
+            return
         for compute_var_name, compute_var_expr in self.compute_vars.items():
-            env[compute_var_name] = self._compute_env_var(compute_var_expr, input_config, env)
+            try:
+                env[compute_var_name] = self._compute_env_var(compute_var_expr, input_config, env)
+            except Exception as e:
+                log_print(
+                    f'WARN: can\'t evaluate expression "{compute_var_expr}" for compute_var {compute_var_name}',
+                    color='red'
+                )
+                env[compute_var_name] = ''
 
     def _compute_env_var(self, expr, c, e):
         return eval(expr, globals(), locals())

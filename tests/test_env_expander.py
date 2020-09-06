@@ -274,3 +274,87 @@ def test_env_expander_list_lambda():
     }
     check_env_expander(input_config, env_patch, expected_config)
 
+
+def test_env_expander_undefined_ignore_var():
+    input_config = {
+        'environment': {
+            'env_vars': {
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'ignore_vars': [
+                    'PATH'
+                ]
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
+
+def test_env_expander_undefined_expand_var():
+    input_config = {
+        'environment': {
+            'env_vars': {
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'expand_vars': [
+                    'IGNITE_VERSION'
+                ]
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
+
+def test_env_expander_undefined_compute_var():
+    input_config = {
+        'environment': {
+            'env_vars': {
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'compute_vars': {
+                    'MYPATH': '"/"'
+                }
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
+
+def test_env_expander_bad_compute_var_list():
+    input_config = {
+        'environment': {
+            'env_vars': {
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'compute_vars': [
+                    'PATH'
+                ]
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
+def test_env_expander_bad_compute_var_value():
+    input_config = {
+        'environment': {
+            'env_vars': {
+            }
+        },
+        'plugins': {
+            'EnvExpander': {
+                'compute_vars': {
+                    'PATH': '123'
+                }
+            }
+        }
+    }
+    check_env_expander(input_config, {}, input_config)
+
