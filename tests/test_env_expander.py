@@ -17,7 +17,18 @@
 from tiden.tidenpluginmanager import PluginManager
 from os import environ
 from copy import deepcopy
+from pytest import fixture
 
+@fixture
+def envsave(request):
+    backup_keys = set(environ.keys())
+    backup_values = {key: deepcopy(environ[key]) for key in backup_keys}
+    yield request
+    keys_to_delete = set(environ.keys()) - backup_keys
+    for key in keys_to_delete:
+        del environ[key]
+    for k, v in backup_values.items():
+        environ[k] = v
 
 def check_env_expander(input_config, env_patch, _expected_config):
     for env_name, env_val in env_patch.items():
@@ -42,7 +53,7 @@ def check_env_expander(input_config, env_patch, _expected_config):
     assert expected_config == output_config
 
 
-def test_env_expander_no_replace():
+def test_env_expander_no_replace(envsave):
     input_config = {
         'environment': {
             'server_hosts': [],
@@ -55,7 +66,7 @@ def test_env_expander_no_replace():
     check_env_expander(input_config, {}, input_config)
 
 
-def test_env_expander_ignore_vars():
+def test_env_expander_ignore_vars(envsave):
     input_config = {
         'environment': {
             'env_vars': {
@@ -75,7 +86,7 @@ def test_env_expander_ignore_vars():
     check_env_expander(input_config, {}, input_config)
 
 
-def test_env_expander_simple_replace():
+def test_env_expander_simple_replace(envsave):
     input_config = {
         'attr_match': '${ATTR_MATCH}',
     }
@@ -88,7 +99,7 @@ def test_env_expander_simple_replace():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_list_replace_no_expand():
+def test_env_expander_list_replace_no_expand(envsave):
     input_config = {
         'hosts': '${HOSTS}',
     }
@@ -101,7 +112,7 @@ def test_env_expander_list_replace_no_expand():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_sub_replace():
+def test_env_expander_sub_replace(envsave):
     input_config = {
         'artifacts': {
             'ignite-${VERSION}': {
@@ -124,7 +135,7 @@ def test_env_expander_sub_replace():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_list_replace_with_expansion():
+def test_env_expander_list_replace_with_expansion(envsave):
     plugins_config = {
         'EnvExpander': {
             'expand_vars': 'VERSION',
@@ -158,7 +169,7 @@ def test_env_expander_list_replace_with_expansion():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_list_replace_with_two_vars_expansion():
+def test_env_expander_list_replace_with_two_vars_expansion(envsave):
     plugins_config = {
         'EnvExpander': {
             'expand_vars': [
@@ -204,11 +215,11 @@ def test_env_expander_list_replace_with_two_vars_expansion():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_simple_lambda():
+def test_env_expander_simple_lambda(envsave):
     plugins_config = {
         'EnvExpander': {
             'compute_vars': {
-                'GRIDGAIN_VERSION': 'e["IGNITE_VERSION"].replace("2.", "8.")'
+                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION").replace("2.", "8.")'
             }
         }
     }
@@ -226,12 +237,12 @@ def test_env_expander_simple_lambda():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_list_lambda():
+def test_env_expander_list_lambda(envsave):
     plugins_config = {
         'EnvExpander': {
             'compute_vars': {
-                'PREV_GRIDGAIN_VERSION': 'e["PREV_IGNITE_VERSION"].replace("2.", "8.")',
-                'GRIDGAIN_VERSION': 'e["IGNITE_VERSION"].replace("2.", "8.")',
+                'PREV_GRIDGAIN_VERSION': 'e.get("PREV_IGNITE_VERSION").replace("2.", "8.", 1)',
+                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION").replace("2.", "8.", 1)',
             },
             'expand_vars': [
                 'PREV_IGNITE_VERSION',
@@ -253,7 +264,7 @@ def test_env_expander_list_lambda():
     }
     env_patch = {
         'IGNITE_VERSION': '2.6.0',
-        'PREV_IGNITE_VERSION': '2.5.0,2.5.1',
+        'PREV_IGNITE_VERSION': '2.5.0,2.5.1,2.2.4',
     }
     expected_config = {
         'artifacts': {
@@ -265,6 +276,10 @@ def test_env_expander_list_lambda():
                 'type': 'ignite',
                 'glob_path': './work/gridgain-community-8.5.1.zip',
             },
+            'base-8.2.4': {
+                'type': 'ignite',
+                'glob_path': './work/gridgain-community-8.2.4.zip',
+            },
             'test': {
                 'type': 'ignite',
                 'glob_path': './work/gridgain-community-8.6.0.zip',
@@ -275,7 +290,7 @@ def test_env_expander_list_lambda():
     check_env_expander(input_config, env_patch, expected_config)
 
 
-def test_env_expander_undefined_ignore_var():
+def test_env_expander_undefined_ignore_var(envsave):
     input_config = {
         'environment': {
             'env_vars': {
@@ -292,8 +307,13 @@ def test_env_expander_undefined_ignore_var():
     check_env_expander(input_config, {}, input_config)
 
 
-def test_env_expander_undefined_expand_var():
+def test_env_expander_undefined_expand_var(envsave):
     input_config = {
+        'artifacts': {
+            'ignite': {
+                'glob_path': 'blah-blah-${IGNITE_VERSION}',
+            }
+        },
         'environment': {
             'env_vars': {
             }
@@ -309,7 +329,7 @@ def test_env_expander_undefined_expand_var():
     check_env_expander(input_config, {}, input_config)
 
 
-def test_env_expander_undefined_compute_var():
+def test_env_expander_undefined_compute_var(envsave):
     input_config = {
         'environment': {
             'env_vars': {
@@ -326,7 +346,7 @@ def test_env_expander_undefined_compute_var():
     check_env_expander(input_config, {}, input_config)
 
 
-def test_env_expander_bad_compute_var_list():
+def test_env_expander_bad_compute_var_list(envsave):
     input_config = {
         'environment': {
             'env_vars': {
@@ -335,14 +355,14 @@ def test_env_expander_bad_compute_var_list():
         'plugins': {
             'EnvExpander': {
                 'compute_vars': [
-                    'PATH'
+                    'MYPATH'
                 ]
             }
         }
     }
     check_env_expander(input_config, {}, input_config)
 
-def test_env_expander_bad_compute_var_value():
+def test_env_expander_bad_compute_var_value(envsave):
     input_config = {
         'environment': {
             'env_vars': {
@@ -351,7 +371,7 @@ def test_env_expander_bad_compute_var_value():
         'plugins': {
             'EnvExpander': {
                 'compute_vars': {
-                    'PATH': '123'
+                    'MYPATH': '123'
                 }
             }
         }
