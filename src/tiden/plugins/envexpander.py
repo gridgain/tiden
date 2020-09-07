@@ -89,7 +89,7 @@ class EnvExpander(TidenPlugin):
                 env[compute_var_name] = self._compute_env_var(compute_var_expr, input_config, env)
             except Exception as e:
                 log_print(
-                    f'WARN: can\'t evaluate expression "{compute_var_expr}" for compute_var {compute_var_name}',
+                    f'WARN: can\'t evaluate expression "{compute_var_expr}" for compute_var {compute_var_name}: {e}',
                     color='red'
                 )
                 env[compute_var_name] = ''
