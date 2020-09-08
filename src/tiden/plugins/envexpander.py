@@ -27,11 +27,15 @@ TIDEN_PLUGIN_VERSION = '1.0.0'
 class EnvExpander(TidenPlugin):
     # regular expression to match extrapolation placeholder
     # partially adheres to bash convention for default values.
+    #
     # allows placeholder formats:
     #  '$VAR'
     #  '${VAR}'
     #  '${VAR:-default}'
-    re_var = compile(r'\${?([A-z\-_a-z0-9]+)(:-[^}]*)?}?')
+    #  '${VAR:default}'  - also supported, but not recommended
+    #
+    # NB: missing variable without default will be left unchanged instead of being replaced to empty string
+    re_var = compile(r'\${?([A-z\-_a-z0-9]+)(:-?[^}]*)?}?')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,7 +122,15 @@ class EnvExpander(TidenPlugin):
                     continue
                 if var not in env:
                     if m.group(2):
-                        val = str(m.group(2))[2:]   # strip leading '-'
+                        # don't whine about missing variable if there exist default value
+                        if var in self.missing_vars:
+                            self.missing_vars.remove(var)
+                        val = str(m.group(2))
+                        if val.startswith(':-'):
+                            # strip leading '-' if it is present
+                            val = val[2:]
+                        else:
+                            val = val[1:]
                     else:
                         self.missing_vars.add(var)
                         continue

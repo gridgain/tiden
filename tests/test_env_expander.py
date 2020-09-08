@@ -52,7 +52,8 @@ def check_env_expander(input_config, env_patch, _expected_config):
         del output_config['plugins']['EnvExpander']['module']
     if del_plug:
         del output_config['plugins']
-    assert expected_config == output_config
+    assert output_config == expected_config
+    return pm
 
 
 def test_env_expander_no_replace(envsave):
@@ -109,6 +110,57 @@ def test_env_expander_replace_default(envsave):
     }
     expected_config = {
         'attr_match': 'none',
+    }
+    pm = check_env_expander(input_config, env_patch, expected_config)
+    env_expander = pm.plugins['EnvExpander']['instance']
+    assert env_expander.missing_vars == set()
+
+
+def test_env_expander_no_default_no_envvar(envsave):
+    input_config = {
+        'attr_match': '${ATTR_MATCH}',
+    }
+    env_patch = {
+    }
+    expected_config = {
+        'attr_match': '${ATTR_MATCH}',
+    }
+    pm = check_env_expander(input_config, env_patch, expected_config)
+    env_expander = pm.plugins['EnvExpander']['instance']
+    assert env_expander.missing_vars == set(['ATTR_MATCH'])
+
+
+def test_env_expander_ignore_var_not_replaced(envsave):
+    plugins_config = {
+        'EnvExpander': {
+            'ignore_vars': [
+                'ATTR_MATCH',
+            ],
+        },
+    }
+    input_config = {
+        'plugins': plugins_config,
+        'attr_match': '${ATTR_MATCH:-none}',
+    }
+    env_patch = {
+        'ATTR_MATCH': 'all',
+    }
+    expected_config = {
+        'attr_match': '${ATTR_MATCH:-none}',
+        'plugins': plugins_config,
+    }
+    check_env_expander(input_config, env_patch, expected_config)
+
+
+def test_env_expander_default_overriden(envsave):
+    input_config = {
+        'attr_match': '${ATTR_MATCH:-none}',
+    }
+    env_patch = {
+        'ATTR_MATCH': 'any',
+    }
+    expected_config = {
+        'attr_match': 'any',
     }
     check_env_expander(input_config, env_patch, expected_config)
 
@@ -233,7 +285,7 @@ def test_env_expander_simple_lambda(envsave):
     plugins_config = {
         'EnvExpander': {
             'compute_vars': {
-                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION", "").replace("2.", "8.")'
+                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION", "").replace("2.", "8.", 1)'
             }
         }
     }
@@ -375,6 +427,7 @@ def test_env_expander_bad_compute_var_list(envsave):
         }
     }
     check_env_expander(input_config, {}, input_config)
+
 
 def test_env_expander_bad_compute_var_value(envsave):
     input_config = {
