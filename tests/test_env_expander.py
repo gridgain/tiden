@@ -19,6 +19,7 @@ from os import environ
 from copy import deepcopy
 from pytest import fixture
 
+
 @fixture
 def envsave(request):
     backup_keys = set(environ.keys())
@@ -29,6 +30,7 @@ def envsave(request):
         del environ[key]
     for k, v in backup_values.items():
         environ[k] = v
+
 
 def check_env_expander(input_config, env_patch, _expected_config):
     for env_name, env_val in env_patch.items():
@@ -95,6 +97,18 @@ def test_env_expander_simple_replace(envsave):
     }
     expected_config = {
         'attr_match': 'any',
+    }
+    check_env_expander(input_config, env_patch, expected_config)
+
+
+def test_env_expander_replace_default(envsave):
+    input_config = {
+        'attr_match': '${ATTR_MATCH:-none}',
+    }
+    env_patch = {
+    }
+    expected_config = {
+        'attr_match': 'none',
     }
     check_env_expander(input_config, env_patch, expected_config)
 
@@ -219,7 +233,7 @@ def test_env_expander_simple_lambda(envsave):
     plugins_config = {
         'EnvExpander': {
             'compute_vars': {
-                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION").replace("2.", "8.")'
+                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION", "").replace("2.", "8.")'
             }
         }
     }
@@ -241,8 +255,8 @@ def test_env_expander_list_lambda(envsave):
     plugins_config = {
         'EnvExpander': {
             'compute_vars': {
-                'PREV_GRIDGAIN_VERSION': 'e.get("PREV_IGNITE_VERSION").replace("2.", "8.", 1)',
-                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION").replace("2.", "8.", 1)',
+                'PREV_GRIDGAIN_VERSION': 'e.get("PREV_IGNITE_VERSION", "").replace("2.", "8.", 1)',
+                'GRIDGAIN_VERSION': 'e.get("IGNITE_VERSION", "").replace("2.", "8.", 1)',
             },
             'expand_vars': [
                 'PREV_IGNITE_VERSION',
