@@ -180,7 +180,7 @@ class NasManager:
             raise NasManagerException('NasManager (shared folder) is not configured')
 
         shared_file = self.get_share_root() + '/' + file
-        print_blue('Going to delete shared file: %s.' % shared_file)
+        log_print(f'Going to delete shared file: {shared_file}', color='debug')
         command = 'rm -f {sf}; ' \
                   'echo "Result code: $?";'.format(sf=shared_file)
         result = self.ssh.exec([command])
