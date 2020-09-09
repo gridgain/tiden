@@ -25,15 +25,26 @@ TIDEN_PLUGIN_VERSION = '1.0.0'
 
 
 class EnvExpander(TidenPlugin):
-    re_var = compile(r'\${?([A-z\-_a-z0-9]+)}?')
+    # regular expression to match extrapolation placeholder
+    # partially adheres to bash convention for default values.
+    #
+    # allows placeholder formats:
+    #  '$VAR'
+    #  '${VAR}'
+    #  '${VAR:-default}'
+    #  '${VAR:default}'  - also supported, but not recommended
+    #
+    # NB: missing variable without default will be left unchanged instead of being replaced to empty string
+    re_var = compile(r'\${?([A-z\-_a-z0-9]+)(:-?[^}]*)?}?')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.ignore_vars = self.options.get('ignore_vars', [])
-        self.expand_var_names = self.options.get('expand_vars', [])
-        if type(self.expand_var_names) == type(''):
-            self.expand_var_names = [self.expand_var_names]
+        expand_var_names = self.options.get('expand_vars', [])
+        if isinstance(expand_var_names, str):
+            expand_var_names = [expand_var_names]
+        self.expand_var_names = [var for var in expand_var_names if var in environ]
         self.compute_vars = self.options.get('compute_vars', {})
         self.missing_vars = set()
 
@@ -77,8 +88,18 @@ class EnvExpander(TidenPlugin):
             output_config[new_section_name] = self._patch_section(section_data, env)
 
     def _compute_env(self, input_config, env):
+        if type(self.compute_vars) != type({}):
+            log_print(f'WARN: compute_vars must be dictionary', color='red')
+            return
         for compute_var_name, compute_var_expr in self.compute_vars.items():
-            env[compute_var_name] = self._compute_env_var(compute_var_expr, input_config, env)
+            try:
+                env[compute_var_name] = self._compute_env_var(compute_var_expr, input_config, env)
+            except Exception as e:
+                log_print(
+                    f'WARN: can\'t evaluate expression "{compute_var_expr}" for compute_var {compute_var_name}: {e}',
+                    color='red'
+                )
+                env[compute_var_name] = ''
 
     def _compute_env_var(self, expr, c, e):
         return eval(expr, globals(), locals())
@@ -97,14 +118,26 @@ class EnvExpander(TidenPlugin):
                 if var in self.ignore_vars:
                     continue
                 if var not in env:
-                    self.missing_vars.add(var)
+                    if m.group(2):
+                        # don't whine about missing variable if there exist default value
+                        if var in self.missing_vars:
+                            self.missing_vars.remove(var)
+                        val = str(m.group(2))
+                        if val.startswith(':-'):
+                            # strip leading '-' if it is present
+                            val = val[2:]
+                        else:
+                            val = val[1:]
+                    else:
+                        self.missing_vars.add(var)
+                        continue
                 else:
                     val = env.get(var)
-                    output_string = output_string[:m.start(0)] + val + output_string[m.end(0):]
-                    if var in self.missing_vars:
-                        self.missing_vars.remove(var)
-                    replaced = True
-                    break
+                output_string = output_string[:m.start(0)] + val + output_string[m.end(0):]
+                if var in self.missing_vars:
+                    self.missing_vars.remove(var)
+                replaced = True
+                break
             if not replaced:
                 break
         return output_string
