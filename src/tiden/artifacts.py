@@ -278,7 +278,7 @@ def repack_and_get_command_to_unzip(previous_artifacts_config, copied_artifacts,
                 config_changes[artifact_name]['remote_path'] = remote_path
 
         if config_changes[artifact_name].get('path') is None:
-            log_print("Artifact %s not found" % artifact_name)
+            log_print("Artifact %s not found" % artifact_name, color='red')
             exit(1)
     return command, config_changes, artifacts_to_delete
 
@@ -523,12 +523,14 @@ def _parse_args(args, extract_dir, artifacts_dir, current_artifact_name, artifac
     """
     new_args = [args[0]]
     dirs_to_delete = []
+    print_green('Current artifacts: ' + repr(artifacts))
     for arg_idx in range(1, len(args)):
         new_path = args[arg_idx].replace('self:', self_entry)
         # searching for other artifact name
         found = search('^\$.*\$', new_path)
         if found:
             artifact_name = new_path[found.start() + 1:found.end() - 1]
+            print_green('Current artifact_name: ' + repr(artifact_name))
             if artifact_name == current_artifact_name:
                 new_path = args[arg_idx].replace('$'+artifact_name+'$', self_entry)
             else:
