@@ -628,7 +628,7 @@ def test_case_id(*args):
     return wrapper
 
 
-def should_be_skipped(passed_attr, attribs, attr_match, debug=True):
+def should_be_skipped(passed_attr, attribs, attr_match, debug=False):
     skip_it = False
     if debug:
         print('------ Passed attributes --------')
