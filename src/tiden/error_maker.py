@@ -39,7 +39,7 @@ class FileSystemErrorMaker:
             files = [file_name for file_name in results[host][0].rstrip().splitlines() if file_name]
         else:
             files = []
-        self.logger.debug(files)
+        self.logger.debug(f'util_remote_ls: {host} {remote_path}\n{files}')
         return files
 
     def allocate_disc_space(self, host, remote_path, size):
@@ -116,11 +116,13 @@ class IOErrorMaker:
     def make_wal_files_read_only(self, node_id=None):
         node_idx, host = self.run_on_ignite_host(node_id)
         node_home = self.ignite.nodes[node_idx]['ignite_home']
+        consistent_id = self.ignite.get_node_consistent_id(node_idx)
+        wal_path = f'{node_home}/work/db/wal/{consistent_id}/'
         if IOErrorMaker.debug:
             self.file_system_error.util_remote_ls(host, f'{node_home}/work/')
             self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/')
-        consistent_id = self.ignite.get_node_consistent_id(node_idx)
-        wal_path = f'{node_home}/work/db/wal/{consistent_id}/'
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/{consistent_id}')
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/wal/{consistent_id}')
         files = [
             f'{wal_path}{file_name}' for file_name in self.file_system_error.util_remote_ls(host, wal_path) if file_name
         ]
