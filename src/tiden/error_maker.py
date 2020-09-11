@@ -106,6 +106,8 @@ class IOErrorMaker:
     ssh = None
     file_system_error = None
 
+    debug = True
+
     def __init__(self, ign, ssh):
         self.ignite = ign
         self.ssh = ssh
@@ -114,9 +116,14 @@ class IOErrorMaker:
     def make_wal_files_read_only(self, node_id=None):
         node_idx, host = self.run_on_ignite_host(node_id)
         node_home = self.ignite.nodes[node_idx]['ignite_home']
-        wal_path = '%s/work/db/wal/%s/' % (node_home, self.ignite.get_node_consistent_id(node_idx))
-        files = ['%s%s' % (wal_path, file_name)
-                 for file_name in self.file_system_error.util_remote_ls(host, wal_path) if file_name]
+        if IOErrorMaker.debug:
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/')
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/')
+        consistent_id = self.ignite.get_node_consistent_id(node_idx)
+        wal_path = f'{node_home}/work/db/wal/{consistent_id}/'
+        files = [
+            f'{wal_path}{file_name}' for file_name in self.file_system_error.util_remote_ls(host, wal_path) if file_name
+        ]
         self.file_system_error.make_lfs_readonly(host, files)
         return node_idx, files
 
@@ -143,7 +150,13 @@ class IOErrorMaker:
     def make_ignite_dir_read_only(self, path_template, node_id=None):
         node_idx, host = self.run_on_ignite_host(node_id)
         node_home = self.ignite.nodes[node_idx]['ignite_home']
-        remote_path = path_template % (node_home, self.ignite.get_node_consistent_id(node_idx))
+        consistent_id = self.ignite.get_node_consistent_id(node_idx)
+        if IOErrorMaker.debug:
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/')
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/')
+            self.file_system_error.util_remote_ls(host, f'{node_home}/work/db/{consistent_id}')
+
+        remote_path = path_template % (node_home, consistent_id)
         self.file_system_error.make_lfs_readonly(host, remote_path)
 
         return node_idx, remote_path
