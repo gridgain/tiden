@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from .logger import get_logger
-from .util import print_red
+from .util import print_red, version_num
 
 
 class FileSystemErrorMaker:
@@ -130,7 +130,10 @@ class IOErrorMaker:
         return node_idx, files
 
     def make_binary_meta_read_only(self, node_id=None):
-        binary_meta_path = '%s/work/binary_meta/%s/'
+        if version_num(self.ignite.get_ignite_version()) >= version_num('8.7.17'):
+            binary_meta_path = '%s/work/db/binary_meta/%s/'
+        else:
+            binary_meta_path = '%s/work/binary_meta/%s/'
         node_idx, remote_path = self.make_ignite_dir_read_only(path_template=binary_meta_path, node_id=node_id)
         return node_idx, remote_path
 
