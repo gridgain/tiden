@@ -278,7 +278,7 @@ def repack_and_get_command_to_unzip(previous_artifacts_config, copied_artifacts,
                 config_changes[artifact_name]['remote_path'] = remote_path
 
         if config_changes[artifact_name].get('path') is None:
-            log_print("Artifact %s not found" % artifact_name)
+            log_print("Artifact %s not found" % artifact_name, color='red')
             exit(1)
     return command, config_changes, artifacts_to_delete
 

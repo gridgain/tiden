@@ -323,8 +323,8 @@ class ControlUtility(BaseUtility):
         return help
 
     def get_ignite_version(self):
-        from tiden.testconfig import test_config
         if self.ignite_version is None:
+            from tiden.testconfig import test_config
             self.ignite_version = test_config.get_ignite_version(self.ignite.name)
             self.ignite_version_num = version_num(self.ignite_version)
         return self.ignite_version
