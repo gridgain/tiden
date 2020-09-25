@@ -5,7 +5,7 @@
 ## 1. What is Tiden?
 
 The test framework for testing Apache Ignite in distributed environment
-(**T**esting **I**gnite in **D**istributed **EN**vironment).
+(**T**esting **I**gnite in **D**istributed **EN**vironment) that developed by GridGain.
 
 ## 2. Requirements.
 
