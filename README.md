@@ -1,5 +1,7 @@
 # Tiden 0.6.5
 
+<img src="https://go.gridgain.com/rs/491-TWR-806/images/emailLogo.png">
+
 ## 1. What is Tiden?
 
 The test framework for testing Apache Ignite in distributed environment
