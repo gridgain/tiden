@@ -27,7 +27,8 @@ class BaseUtility:
         self.latest_utility_host = None
         self.ignite = ignite
 
-    def check_content_all_required(self, buff, lines_to_search, maintain_order=False, escape=None):
+    def check_content_all_required(self, buff, lines_to_search, maintain_order=False, escape=None,
+                                   match_once_or_more=False):
         """
         This method checks the all lines in lines_to_search list could be found in buff. If not then exception
         TidenException will be risen.
@@ -67,19 +68,44 @@ class BaseUtility:
                     m = re.search(line_to_search, line)
                     if m:
                         found.append(line_to_search)
+
         if len(search_for) != len(found):
-            get_logger('tiden').debug('Searching \n%s \nand found: \n%s \nin buffer \n%s'
-                                      % ('\n'.join(search_for), '\n'.join(found), '\n'.join(search_in)))
+            search_for_str = '\n'.join(search_for)
+            found_str = '\n'.join(found)
+            search_in_str = '\n'.join(search_in)
+            debug_str = '\n'.join([
+                    f"> Searching for:",
+                    f"{search_for_str}",
+                    f"> Found:",
+                    f"{found_str}",
+                    f"> In buffer:",
+                    f"{search_in_str}",
+                ]
+            )
+
+            get_logger('tiden').debug(debug_str)
+
+            search_for_uniq = set(search_for)
+            found_uniq = set(found)
+
             if len(search_for) > len(found):
-                raise TidenException('Searching \n%s \nand found: \n%s \nin buffer \n%s.\nCan\'t find:\n%s'
-                                 % ('\n'.join(search_for),
-                                    '\n'.join(found),
-                                    '\n'.join(search_in),
-                                    set(search_for).difference(set(found))))
+                raise TidenException(
+                    '\n'.join([
+                        f"{debug_str}",
+                        f"> Can't find:",
+                        f"{search_for_uniq - found_uniq}"
+                    ])
+                )
             else:
-                raise TidenException('Searching \n%s \nand found: \n%s \nin buffer \n%s.\nFound additional items:\n%s'
-                                     % ('\n'.join(search_for),
-                                        '\n'.join(found),
-                                        '\n'.join(search_in),
-                                        set(found).difference(set(search_for))))
+                # len(search_for) < len(found)
+                if not match_once_or_more or \
+                        (match_once_or_more and (len(search_for_uniq) != len(found_uniq))):
+                    raise TidenException(
+                        '\n'.join([
+                            f"{debug_str}",
+                            f"Found additional items:",
+                            f"{found_uniq - search_for_uniq}"
+                        ])
+                    )
+
         return result
