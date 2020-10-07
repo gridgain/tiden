@@ -98,8 +98,7 @@ class BaseUtility:
                 )
             else:
                 # len(search_for) < len(found)
-                if not match_once_or_more or \
-                        (match_once_or_more and (len(search_for_uniq) != len(found_uniq))):
+                if not match_once_or_more or len(search_for_uniq) != len(found_uniq):
                     raise TidenException(
                         '\n'.join([
                             f"{debug_str}",
