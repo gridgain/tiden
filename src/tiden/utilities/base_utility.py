@@ -33,44 +33,55 @@ class BaseUtility:
         This method checks the all lines in lines_to_search list could be found in buff. If not then exception
         TidenException will be risen.
 
-        :param buff:
-        :param lines_to_search:
-        :return:
+        :param buff: text buffer to search in as a single string
+        :param lines_to_search: a string or a list of strings to search for (regex is allowed)
+        :param maintain_order: every string from lines_line_to_search must match in exactly the same order
+        :param escape: a list of strings to exclude from the text buffer
+        :param match_once_or_more: allow to match the same search string more than once
+        :return: True
         """
         import re
+
         search_in = [line for line in buff.split('\n') if line]
-        if escape:
-            escape_from_search = []
-            for item_to_escape in escape:
-                tmp_ = [line for line in search_in if item_to_escape in line]
-                escape_from_search += tmp_
-            if escape_from_search:
-                search_in = [item for item in search_in if item not in escape_from_search]
-
-        search_for = list(lines_to_search)
-        found = []
-        result = True
-
-        if maintain_order:
-            search_left = search_for.copy()
-            for line in search_in:
-                if len(search_left) <= 0:
-                    break
-                cur_search_for = search_left[0]
-                m = re.search(cur_search_for, line)
-                if m:
-                    found.append(cur_search_for)
-                    search_left = search_left[1:]
-
+        if isinstance(lines_to_search, list):
+            lines_to_search_0 = lines_to_search
         else:
-            for line_to_search in search_for:
-                for line in search_in:
-                    m = re.search(line_to_search, line)
-                    if m:
-                        found.append(line_to_search)
+            lines_to_search_0 = list(lines_to_search)
 
-        if len(search_for) != len(found):
-            search_for_str = '\n'.join(search_for)
+        search_for_iter = iter(lines_to_search_0)
+        if maintain_order:
+            search_for = [next(search_for_iter)]
+        else:
+            search_for = lines_to_search_0
+
+        found = []
+        match_found = False
+
+        # Iterate through all input lines
+        for line_in in search_in:
+            # Skip current line if it matches any line from the "escape" list
+            if any(map(lambda esc_line: esc_line in line_in, escape)):
+                continue
+
+            # Pick a next search string from "lines_to_search"
+            if maintain_order and match_found:
+                next_search_str = next(search_for_iter, None)
+                search_for = [next_search_str] if next_search_str else []
+
+            match_found = False
+
+            # Find if current input line matches any line from "lines_to_search"
+            for line_to_search in search_for:
+                m = re.search(line_to_search, line_in)
+                if m:
+                    match_found = True
+                    if not match_once_or_more or line_to_search not in found:
+                        found.append(line_to_search)
+                    break
+
+        # Check results
+        if len(lines_to_search_0) != len(found):
+            search_for_str = '\n'.join(lines_to_search_0)
             found_str = '\n'.join(found)
             search_in_str = '\n'.join(search_in)
             debug_str = '\n'.join([
@@ -85,10 +96,10 @@ class BaseUtility:
 
             get_logger('tiden').debug(debug_str)
 
-            search_for_uniq = set(search_for)
+            search_for_uniq = set(lines_to_search_0)
             found_uniq = set(found)
 
-            if len(search_for) > len(found):
+            if len(lines_to_search_0) > len(found):
                 raise TidenException(
                     '\n'.join([
                         f"{debug_str}",
@@ -98,13 +109,12 @@ class BaseUtility:
                 )
             else:
                 # len(search_for) < len(found)
-                if not match_once_or_more or len(search_for_uniq) != len(found_uniq):
-                    raise TidenException(
-                        '\n'.join([
-                            f"{debug_str}",
-                            f"Found additional items:",
-                            f"{found_uniq - search_for_uniq}"
-                        ])
-                    )
+                raise TidenException(
+                    '\n'.join([
+                        f"{debug_str}",
+                        f"Found additional items:",
+                        f"{found_uniq - search_for_uniq}"
+                    ])
+                )
 
-        return result
+        return True
