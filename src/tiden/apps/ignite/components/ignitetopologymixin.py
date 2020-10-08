@@ -51,6 +51,9 @@ class IgniteTopologyMixin(IgniteNodesMixin):
             'Failure handler':
                 {'regex': '(.+JVM will be halted immediately due to the failure: .+)',
                  'remote_grep_options': '-E'},
+            'Out of memory':
+                {'regex': '(.+java.lang.OutOfMemoryError.+)',
+                 'remote_grep_options': '-E'},
             'Error on node start':
                 {'regex': '(^.+Exception during start processors, node will be stopped and close connections)',
                  'remote_grep_options': '-E'},
