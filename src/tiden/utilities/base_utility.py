@@ -60,7 +60,7 @@ class BaseUtility:
         # Iterate through all input lines
         for line_in in search_in:
             # Skip current line if it matches any line from the "escape" list
-            if any(map(lambda esc_line: esc_line in line_in, escape)):
+            if escape and any(map(lambda esc_line: esc_line in line_in, escape)):
                 continue
 
             # Pick a next search string from "lines_to_search"
