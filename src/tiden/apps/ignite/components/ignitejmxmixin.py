@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from .ignitelogdatamixin import IgniteLogDataMixin
 
 
@@ -43,7 +42,10 @@ class IgniteJmxMixin(IgniteLogDataMixin):
         )
 
     def get_jmx_utility(self):
-        raise NotImplementedError
+        from tiden_gridgain.utilities import JmxUtility
+        if self._jmx is None:
+            self._jmx = JmxUtility(self)
+        return self._jmx
 
     jmx = property(get_jmx_utility, None)
 
