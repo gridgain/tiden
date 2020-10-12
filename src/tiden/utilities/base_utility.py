@@ -46,7 +46,7 @@ class BaseUtility:
         if isinstance(lines_to_search, list):
             lines_to_search_0 = lines_to_search
         else:
-            lines_to_search_0 = list(lines_to_search)
+            lines_to_search_0 = [lines_to_search]
 
         search_for_iter = iter(lines_to_search_0)
         if maintain_order:
