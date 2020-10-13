@@ -43,16 +43,14 @@ class BaseUtility:
         import re
 
         search_in = [line for line in buff.split('\n') if line]
-        if isinstance(lines_to_search, list):
-            lines_to_search_0 = lines_to_search
-        else:
-            lines_to_search_0 = [lines_to_search]
+        if not isinstance(lines_to_search, list):
+            lines_to_search = [lines_to_search]
 
-        search_for_iter = iter(lines_to_search_0)
+        search_for_iter = iter(lines_to_search)
         if maintain_order:
             search_for = [next(search_for_iter)]
         else:
-            search_for = lines_to_search_0
+            search_for = lines_to_search
 
         found = []
         match_found = False
@@ -80,8 +78,8 @@ class BaseUtility:
                     break
 
         # Check results
-        if len(lines_to_search_0) != len(found):
-            search_for_str = '\n'.join(lines_to_search_0)
+        if len(lines_to_search) != len(found):
+            search_for_str = '\n'.join(lines_to_search)
             found_str = '\n'.join(found)
             search_in_str = '\n'.join(search_in)
             debug_str = '\n'.join([
@@ -96,10 +94,10 @@ class BaseUtility:
 
             get_logger('tiden').debug(debug_str)
 
-            search_for_uniq = set(lines_to_search_0)
+            search_for_uniq = set(lines_to_search)
             found_uniq = set(found)
 
-            if len(lines_to_search_0) > len(found):
+            if len(lines_to_search) > len(found):
                 raise TidenException(
                     '\n'.join([
                         f"{debug_str}",
