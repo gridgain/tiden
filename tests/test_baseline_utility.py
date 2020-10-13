@@ -19,6 +19,19 @@ positive_input = [
     ('\n'.join(["hello!", "hola!", "hello!", "hi!"]), ["hello!", "hello!"]),
     ('\n'.join(["hola!", "hello!", "hi!"]), ["hello", "hola!"]),
     ('\n'.join(["Conflict partition: X", "Execution time"]), ["Conflict partition"]),
+    ('\n'.join([
+        "-----------",
+        "Command [LIST] successfully finished",
+        "Exit code: 0"]
+    ),
+        ["Command \[LIST\] successfully finished", "-----------", "Exit code: 0"]),
+    ('\n'.join([
+        "List of snapshots:",
+        "ID=1234567890, ..., TYPE=FULL, CLUSTER SIZE=Y, ....",
+        "Number of full snapshots: 3",
+        "Command [LIST] successfully finished in 0 seconds."
+    ]),
+        ["List of snapshots:", "ID=\d+, .* TYPE=FULL", "Command \[LIST\] successfully finished in \d+ seconds."]),
 ]
 negative_input = [
     ('\n'.join(["hola!", "hello!", "hi!"]), ["ni hao!"]),
