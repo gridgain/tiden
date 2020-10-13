@@ -159,7 +159,8 @@ class ControlUtility(BaseUtility):
             success = self.check_content_all_required(
                 lines, kwargs.get('all_required'),
                 maintain_order=kwargs.get('maintain_order', None),
-                escape=kwargs.get('escape', None)
+                escape=kwargs.get('escape', None),
+                match_once_or_more=kwargs.get('match_once_or_more', None),
             )
 
             if len(lines.split('\n')) > too_many_lines_num:
