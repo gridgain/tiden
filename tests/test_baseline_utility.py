@@ -11,88 +11,90 @@ def base_util():
     yield BaseUtility(MockIgnite())
 
 
-def test_simple_positive(base_util):
-    buff = "hola!\nhello!\nhi!"
-    lines_to_search = ["hello"]
+positive_input = [
+    # ("", ""),
+    ('\n'.join(["hola!", "hello!", "hi!"]), "hello"),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello!"]),
+    ('\n'.join(["hello!", "hola!", "hello!", "hi!"]), ["hello!", "hello!"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello", "hola!"]),
+    ('\n'.join(["Conflict partition: X", "Execution time"]), ["Conflict partition"]),
+]
+negative_input = [
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["ni hao!"]),
+    ('\n'.join(["hola!", "hello!", "hi!", "hello"]), ["hello"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello!", "hello!"]),
+    ('\n'.join(["Conflict partition: X", "Conflict partition: Y", "Execution time"]), ["Conflict partition"]),
+]
+
+# match_once_or_more = True
+positive_input_match_once_or_more = [
+    ('\n'.join(["Conflict partition: X", "Conflict partition: Y", "Execution time"]), ["Conflict partition"]),
+]
+negative_input_match_once_or_more = [
+    ('\n'.join(["Conflict partition: X", "Conflict partition: Y", "Execution time"]), ["Conflict partition", "Status"]),
+]
+
+# maintain_order = True
+positive_input_maintain_order = [
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hola", "hello"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hola", "hi"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello"]),
+]
+negative_input_maintain_order = [
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello", "hola"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hi", "hello"]),
+    ('\n'.join(["hola!", "hello!", "hi!"]), ["hello", "ni hao"]),
+]
+
+# escape = True
+positive_input_escape = [
+    ('\n'.join(["Conflict partition: X", "Conflict partition: YYY", "Execution time"]), ["Conflict partition"], ["YYY"]),
+]
+negative_input_escape = [
+    ('\n'.join(["Conflict partition: YYY", "Execution time"]), ["Conflict partition"], ["YYY"]),
+]
+
+
+@pytest.mark.parametrize("buff,lines_to_search", positive_input)
+def test_defaults_positive(base_util, buff, lines_to_search):
     assert base_util.check_content_all_required(buff, lines_to_search)
 
 
-def test_simple_negative(base_util):
+@pytest.mark.parametrize("buff,lines_to_search", negative_input)
+def test_defaults_negative(base_util, buff, lines_to_search):
     with pytest.raises(TidenException):
-        buff = "hola!\nhello!\nhi!"
-        lines_to_search = ["ni hao!"]
         base_util.check_content_all_required(buff, lines_to_search)
 
 
-def test_multiple_lines(base_util):
-    buff = "hola!\nhello!\nhi!"
-    lines_to_search = ["hi!", "hola!"]
-    assert base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_repeated_line_positive(base_util):
-    buff = "hola!\nhi!hello!\nhi!"
-    lines_to_search = ["hi!", "hi!"]
-    base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_repeated_line_negative(base_util):
-    with pytest.raises(TidenException):
-        buff = "hola!\nhello!\nhi!"
-        lines_to_search = ["hi!", "hi!"]
-        base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_multiple_lines_negative(base_util):
-    with pytest.raises(TidenException):
-        buff = "hola!\nhello!\nhi!"
-        lines_to_search = ["hola!", "ni hao!"]
-        base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_spaces_negative(base_util):
-    with pytest.raises(TidenException):
-        buff = "hola!\nhello!\nhi!"
-        lines_to_search = [" hi!\n"]
-        base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_several_matches_not_allowed(base_util):
-    with pytest.raises(TidenException):
-        buff = "hello\nhello\nhi"
-        lines_to_search = ["hello"]
-        base_util.check_content_all_required(buff, lines_to_search)
-
-
-def test_several_matches_allowed(base_util):
-    buff = "Control utility\nConflict partition: 123\nConflict partition: 234\nExecution time: XXX"
-    lines_to_search = ["Conflict partition"]
+@pytest.mark.parametrize("buff,lines_to_search", positive_input_match_once_or_more)
+def test_match_once_or_more_positive(base_util, buff, lines_to_search):
     assert base_util.check_content_all_required(buff, lines_to_search, match_once_or_more=True)
 
 
-def test_maintain_order(base_util):
-    buff = "hi\nhello\nni hao"
-    lines_to_search = ["hi", "ni hao"]
+@pytest.mark.parametrize("buff,lines_to_search", negative_input_match_once_or_more)
+def test_match_once_or_more_negative(base_util, buff, lines_to_search):
+    with pytest.raises(TidenException):
+        base_util.check_content_all_required(buff, lines_to_search, match_once_or_more=True)
+
+
+@pytest.mark.parametrize("buff,lines_to_search", positive_input_maintain_order)
+def test_maintain_order_positive(base_util, buff, lines_to_search):
     assert base_util.check_content_all_required(buff, lines_to_search, maintain_order=True)
 
 
-def test_maintain_order_neg(base_util):
+@pytest.mark.parametrize("buff,lines_to_search", negative_input_maintain_order)
+def test_maintain_order_negative(base_util, buff, lines_to_search):
     with pytest.raises(TidenException):
-        buff = "hi\nhello\nni hao"
-        lines_to_search = ["ni hao", "hi"]
-        assert base_util.check_content_all_required(buff, lines_to_search, maintain_order=True)
+        base_util.check_content_all_required(buff, lines_to_search, maintain_order=True)
 
 
-def test_escape(base_util):
-    buff = "hi\nhi and hello\nni hao"
-    lines_to_search = ["hi"]
-    filter_lines = ["hello"]
-    assert base_util.check_content_all_required(buff, lines_to_search, escape=filter_lines)
+@pytest.mark.parametrize("buff,lines_to_search,escape", positive_input_escape)
+def test_escape_positive(base_util, buff, lines_to_search, escape):
+    assert base_util.check_content_all_required(buff, lines_to_search, escape=escape)
 
 
-def test_escape_neg(base_util):
+@pytest.mark.parametrize("buff,lines_to_search,escape", negative_input_escape)
+def test_escape_negative(base_util, buff, lines_to_search, escape):
     with pytest.raises(TidenException):
-        buff = "hi\nhi and hello\nni hao"
-        lines_to_search = ["hello"]
-        filter_lines = ["hi"]
-        base_util.check_content_all_required(buff, lines_to_search, escape=filter_lines)
+        base_util.check_content_all_required(buff, lines_to_search, escape=escape)
