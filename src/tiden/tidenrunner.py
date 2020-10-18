@@ -547,8 +547,6 @@ class TidenRunner:
             # Execute test teardown method
             self.__call_test_setup_teardown('teardown')
 
-            log_print(f'all tests data {self.test_plan[self.test_module].all_tests}', color='debug')
-            log_print(f'tests data {self.test_plan[self.test_module].all_tests[self.current_test_name]}', color='debug')
             self.pm.do('after_test_method',
                        test_status=test_status,
                        exception=test_exception,
