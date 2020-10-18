@@ -23,6 +23,7 @@ from traceback import format_exc
 
 from requests import post
 
+from tiden import log_print
 from tiden.tidenplugin import TidenPlugin
 from tiden.report.steps import InnerReportConfig
 
@@ -136,7 +137,7 @@ class WardReport(TidenPlugin):
         known_issue = kwargs.get('known_issue')
         description = kwargs.get('description')
         inner_report_config: InnerReportConfig = kwargs.get('inner_report_config')
-
+        log_print(f'coming ward data after {known_issue}')
         if not status or not self.current_report.get('title'):
             return
 
