@@ -604,7 +604,7 @@ class TidenRunner:
                 source_resource_dirs = getattr(self.test_class, 'get_source_resource_dirs')()
             else:
                 source_resource_dirs = [f"{self.config['suite_dir']}/res/{self.module_short_name[5:]}"]
-            self.config['rt']['resource_dir'] = source_resource_dirs.copy()
+            self.config['rt']['resource_dir'] = deepcopy(source_resource_dirs)
             for source_resource_dir in source_resource_dirs:
                 for file in glob(f"{source_resource_dir}/*"):
                     if path.isfile(file):
@@ -813,8 +813,8 @@ class TidenRunner:
         if not hasattr(self.test_class, '__configurations__'):
             self.collect_tests1(test_method_names)
         else:
-            cfg_options = getattr(self.test_class, '__configuration_options__').copy()
-            configurations = getattr(self.test_class, '__configurations__').copy()
+            cfg_options = deepcopy(getattr(self.test_class, '__configuration_options__'))
+            configurations = deepcopy(getattr(self.test_class, '__configurations__'))
 
             for configuration in configurations:
                 # set configuration options from given configuration to Tiden config,
@@ -868,7 +868,7 @@ class TidenRunner:
 
                     test_plan.tests_to_execute.append(self.current_test_name)
 
-                test_plan.all_tests[self.current_test_name] = test_param.copy()
+                test_plan.all_tests[self.current_test_name] = deepcopy(test_param)
         finally:
             self.current_test_method = None
             self.current_test_name = None
