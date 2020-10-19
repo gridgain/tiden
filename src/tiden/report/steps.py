@@ -135,7 +135,6 @@ class Step:
     def __init__(self, cls, name, parameters=None, **kwargs):
         self.name = name
         self.cls = cls
-        self.report_exist = bool(getattr(self.cls, '_secret_report_storage', None))
         self.kwargs = kwargs
         self.parameters = parameters or []
         self.unique = None
@@ -145,10 +144,16 @@ class Step:
     def __enter__(self):
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
             log_print(f'Step {self.name} started', color='debug')
-        if self.report_exist:
+        if getattr(self.cls, '_secret_report_storage', None):
             report: InnerReportConfig = getattr(self.cls, '_secret_report_storage', None)
             self.unique = report.start_step(self.name, self.parameters)
             setattr(self.cls, '_secret_report_storage', report)
+        elif getattr(self.cls, '_parent_cls', None) and getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None):
+            report = getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None)
+            self.unique = report.start_step(self.name, parameters=self.parameters)
+            parent_cls = getattr(self.cls, '_parent_cls')
+            setattr(parent_cls, '_secret_report_storage', report)
+            setattr(self.cls, '_parent_cls', parent_cls)
         return self
 
     def failed(self, stacktrace=""):
@@ -158,12 +163,21 @@ class Step:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
             log_print(f'Step {self.name} ended', color='debug')
-        if self.report_exist:
+        if getattr(self.cls, '_secret_report_storage', None):
             report: InnerReportConfig = getattr(self.cls, '_secret_report_storage', None)
             step_result = exc_type is None if self.status is None else self.status
             report.end_step(self.unique, 'passed' if step_result else 'failed',
                             self.stacktrace[:5000] if self.status is not None else format_exc()[:5000])
             setattr(self.cls, '_secret_report_storage', report)
+        elif getattr(self.cls, '_parent_cls', None) and getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None):
+            report: InnerReportConfig = getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None)
+            step_result = exc_type is None if self.status is None else self.status
+            report.end_step(self.unique, 'passed' if step_result else 'failed',
+                            self.stacktrace[:5000] if self.status is not None else format_exc()[:5000])
+            parent_cls = getattr(self.cls, '_parent_cls')
+            setattr(parent_cls, '_secret_report_storage', report)
+            setattr(self.cls, '_parent_cls', parent_cls)
+
         if exc_type is not None:
             raise exc_val
 
