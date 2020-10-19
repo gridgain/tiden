@@ -44,11 +44,18 @@ class WardReport(TidenPlugin):
         self.files_report_url = self.options['files_url']
         self.upload_logs = self.options['upload_logs']
         self.force_report_as_release = self.options.get('report_as_release', None)
+        self.run_id = str(uuid4())
 
-        self.current_report = {
+        if environ.get('BUILD_URL'):
+            self.running_on_jenkins = True
+
+        self.current_report: dict = {}
+
+    def report_base(self):
+        result = {
             'title': '',
             'test_case_id': 0,
-            'run_id': str(uuid4()),
+            'run_id': self.run_id,
             'time': {
                 'start': 0,
                 'start_pretty': '',
@@ -63,8 +70,8 @@ class WardReport(TidenPlugin):
             'description': '',
         }
         if environ.get('BUILD_URL'):
-            self.running_on_jenkins = True
-            self.current_report['data']['jenkins_build_url'] = environ['BUILD_URL']
+            result['data']['jenkins_build_url'] = environ['BUILD_URL']
+        return result
 
     def pretty_datetime(self, time):
         return datetime.fromtimestamp(time).isoformat().replace('T', ' ')
@@ -105,6 +112,7 @@ class WardReport(TidenPlugin):
         if not test_module or not artifacts or not test_name:
             return
 
+        self.current_report = self.report_base()
         self.current_report['title'] = self.modify_test_name(test_name)
         self.current_report['time']['start'] = round(time() * 1000)
         self.current_report['time']['start_pretty'] = self.pretty_datetime(time())
