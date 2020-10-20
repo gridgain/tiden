@@ -19,9 +19,9 @@ from pprint import PrettyPrinter
 from re import match
 from uuid import uuid4
 
+from .sshpool import SshPool
 from .tidenexception import *
 from .util import *
-from .sshpool import SshPool
 
 
 class DockerManager:
@@ -82,7 +82,7 @@ class DockerManager:
                         }, ...)
         """
         cmd = [
-            'docker ps --format "{{.ID}} | {{.Image}} | {{.Status}} | {{.Names}} | {{.Ports}}" '+additional_key + ' -a'
+            f'docker ps --format \"{{.ID}} | {{.Image}} | {{.Status}} | {{.Names}} | {{.Ports}}\" {additional_key} -a'
         ]
         if host:
             res = self.ssh.exec_on_host(host, cmd)
@@ -142,8 +142,8 @@ class DockerManager:
                     continue
                 elif image_name is not None and image_name != container['image']:
                     continue
-                log_print("Remove container '{}' on host {}".format(container['name'], _host))
-                self.ssh.exec_on_host(_host, ['docker rm -f {}'.format(container['id'])])
+                log_print(f"Remove container '{container['name']}' on host {_host}")
+                self.ssh.exec_on_host(_host, [f'docker rm -f {container["id"]}'])
                 if _host in self.running_containers and container['name'] in self.running_containers[_host]:
                     del self.running_containers[_host][container['name']]
                 removed_containers.append(container)
@@ -167,7 +167,7 @@ class DockerManager:
                     info_list = [item.strip() for item in row.split("|")]
                     info = {
                         "id": info_list[0],
-                        'name': '{}:{}'.format(info_list[1], info_list[2])
+                        'name': f'{info_list[1]}:{info_list[2]}'
                     }
                     pulled_images[host] = pulled_images.get(host, []) + [info]
         return pulled_images
@@ -190,8 +190,8 @@ class DockerManager:
                     continue
                 elif name_pattern is not None and not match(name_pattern, image['name']):
                     continue
-                log_print("Remove image '{}' on host {}".format(image['name'], _host))
-                self.ssh.exec_on_host(_host, ['docker rmi -f {}'.format(image['id'])])
+                log_print(f"Remove image '{image['name']}' on host {_host}")
+                self.ssh.exec_on_host(_host, [f'docker rmi -f {image["id"]}'])
                 removed_images.append(image)
         return removed_images
 
@@ -221,12 +221,24 @@ class DockerManager:
                 image_name = file_name
             return image_name
 
-    def build_image(self, host, path, **kwargs):
-        cmd = f'docker build {path}'
-        if 'tag' in kwargs:
-            cmd += f" -t {kwargs['tag']}"
-        if 'file' in kwargs:
-            cmd += f" -f {kwargs['file']}"
+    def build_image(self, host, build_directory, name, dockerfile_path=None, build_args: dict = None):
+        """
+        Execute docker build command on host
+
+        :param host:                host to execute
+        :param build_directory:     build directory
+        :param name:                image name
+        :param dockerfile_path:     Dockerfile path
+        :param build_args:          build args
+        :return:                    build output
+        """
+        params = ''
+        if dockerfile_path:
+            params += f" -f {dockerfile_path}"
+        if build_args:
+            for k, v in build_args.items():
+                params += f' --build-arg {k}={v}'
+        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 {self.config['rt']['remote']['test_dir']}/build_{name}.log"
         return self.ssh.exec_on_host(host, [cmd])
 
     def list_images(self, host=None):
@@ -322,6 +334,18 @@ class DockerManager:
                                 commands -  commands list which need to after image start
                                             and declare which process would be main in container
                                 volume - map directory in container
+                                    examples:
+                                    {
+                                        '/host/path/to/file_or_directory': '/path/inside/container'
+                                    }
+                                    or
+                                    {
+                                        '/host/path/to/file_or_directory': {
+                                            'path': '/path/inside/container',
+                                            'mode': 'ro'
+                                        }
+                                    }
+
                                 params - custom params (-i, -t)
 
         :return:                tuple(Image ID, log file path, image name)
@@ -335,29 +359,24 @@ class DockerManager:
                                  image=image,
                                  commands=commands)
 
-        log_print("Starting container '{}' from image '{}' on {}".format(container_name, image_name, host))
+        log_print(f"Starting container '{container_name}' from image '{image_name}' on {host}")
         log_print(f"Cmd: {cmd}", color='debug')
         output = self.ssh.exec_on_host(host, [cmd])[host]
         if len(output) != 1:
-            raise AssertionError("Can't run image {} on host:\n{}".format(image_name, host, "".join(output)))
+            raise AssertionError(f"Can't run image {image_name} on host:\n{host}")
 
         image_id = output[-1:][0].strip().splitlines()[-1:][0]
-        assert len(image_id) > 32 and match(r'^[a-f0-9]*$', image_id), "Image ID is not correct: '{}'".format(image_id)
+        assert len(image_id) > 32 and match(r'^[a-f0-9]*$', image_id), f"Image ID is not correct: '{image_id}'"
 
         # log container output
-        log_file = kwargs.get('log_file', "{}/{}.log".format(self.config["rt"]["remote"]["test_dir"], container_name))
+        log_file = kwargs.get('log_file', f"{self.config['rt']['remote']['test_dir']}/{container_name}.log")
         log_file = self.log_container_output(host, image_id, log_file)
 
         return image_id, log_file, kwargs["kw_params"]["name"]
 
     def log_container_output(self, host, image_id, log_file):
         logs_dir = self.config["rt"]["remote"]["test_dir"]
-        write_logs_command = "cd {log_dir}; " \
-                             "nohup " \
-                             "  docker logs -f {image} " \
-                             "> {log} 2>&1 &".format(log_dir=logs_dir,
-                                                     image=image_id,
-                                                     log=log_file)
+        write_logs_command = f"cd {logs_dir}; nohup docker logs -f {image_id} > {log_file} 2>&1 &"
         self.ssh.exec_on_host(host, [write_logs_command])
         return log_file
 
@@ -375,7 +394,7 @@ class DockerManager:
         kwargs["kw_params"] = _kw_params
 
         if kwargs.get("tag"):
-            image = "{}:{}".format(image_name, kwargs["tag"])
+            image = f"{image_name}:{kwargs.get('tag', 'latest')}"
         if kwargs.get("network"):
             kw = kwargs.get("kw_params", {})
             kw["network"] = kwargs["network"]
@@ -383,36 +402,39 @@ class DockerManager:
         if kwargs.get('ports'):
             kwargs['skw_params'] = kwargs.get('skw_params', [])
             for host_port, container_port in kwargs['ports']:
-                kwargs['skw_params'].append(('p', '{}:{}'.format(host_port, container_port)))
+                kwargs['skw_params'].append(('p', f'{host_port}:{container_port}'))
         if kwargs.get("kw_params"):
             param_list = []
             iter_params = [kwargs.get("kw_params", {}).items(), kwargs.get("skw_params", [])]
             for iter_param in iter_params:
                 for key, value in iter_param:
                     special_symbol = '' if len(key) == 1 else '-'
-                    param_list.append("{}-{} {}".format(special_symbol, key, value))
+                    param_list.append(f"{special_symbol}-{key} {value}")
             kw_params += ' '.join(param_list)
         if kwargs.get("commands"):
             commands = " ".join(kwargs["commands"])
         if kwargs.get("volume"):
             param = []
             for local_dir, container_dir in kwargs["volume"].items():
-                param.append("-v {}:{}".format(local_dir, container_dir))
-            kw_params += "{} {}".format(kw_params, " ".join(param))
+                if isinstance(container_dir, dict):
+                    param.append(f"-v {local_dir}:{container_dir['path']}:{container_dir['mode']}")
+                else:
+                    param.append(f"-v {local_dir}:{container_dir}")
+            kw_params += f"{kw_params} {' '.join(param)}"
         if kwargs.get('ekw_params'):
             for k, v in kwargs['ekw_params'].items():
-                kw_params += ' --{}={} '.format(k, v)
+                kw_params += f' --{k}={v} '
         if kwargs.get("params"):
             for param in kwargs["params"]:
-                params += " -{} ".format(param)
+                params += f" -{param} "
 
         # if need to redefine entry command by your own
         if kwargs.get('bash_commands', True) and commands:
-            commands = 'bash -c "{}"'.format(commands)
+            commands = f'bash -c "{commands}"'
 
         return image, params, kw_params, commands, container_name
 
-    def exec_in_container(self, cmd, container, host=None, log_path=None):
+    def exec_in_container(self, cmd: str, container, host=None, log_path=None):
         """
         Execute command into container
         :param cmd:             command
@@ -424,12 +446,14 @@ class DockerManager:
         else:
             container_id = container['id']
             host = container['host']
-        exec_cmd = 'docker exec {} bash -c "{}"'.format(container_id, cmd)
+        exec_cmd = f'docker exec {container_id} bash -c "{cmd}"'
 
         if log_path is not None:
-            exec_cmd = 'nohup {} > {} 2>&1 &'.format(exec_cmd, log_path)
+            exec_cmd = f'nohup {exec_cmd} > {log_path} 2>&1 &'
         output = self.ssh.exec_on_host(host, [exec_cmd])[host]
-        return output[0] if len(output) == 1 else ""
+        output = output[0] if len(output) == 1 else ""
+        assert 'no such container' not in output.lower(), f'Failed to find {container} to execute cmd: {cmd}'
+        return output
 
     def _find_host(self, searched_container):
         """
@@ -441,8 +465,7 @@ class DockerManager:
             for name, image in images.items():
                 if image["id"] == searched_container["id"]:
                     return host
-        raise AssertionError("Can't find image {} ({}) in running pool".format(searched_container["name"],
-                                                                               searched_container["id"]))
+        raise AssertionError(f"Can't find image {searched_container['name']} ({searched_container['id']}) in running pool")
 
     def get_logs(self, container):
         """
@@ -508,14 +531,14 @@ class DockerManager:
             for line in results.split("\n"):
                 if 'Storage Driver' in line:
                     if 'overlay' not in line:
-                        raise TidenException("Host '{}' have no 'overlay' docker "
-                                             "storage driver ($ docker info -> Storage Driver:)".format(host))
+                        raise TidenException(f"Host '{host}' have no 'overlay' "
+                                             f"docker storage driver ($ docker info -> Storage Driver:)")
                     else:
                         break
 
     def _cp(self, host, src_path, dist_path):
-        log_print('docker copy {} -> {}'.format(src_path, dist_path), color='debug')
-        self.ssh.exec_on_host(host, ['docker cp {} {}'.format(src_path, dist_path)])
+        log_print(f'docker copy {src_path} -> {dist_path}', color='debug')
+        self.ssh.exec_on_host(host, [f'docker cp {src_path} {dist_path}'])
 
     def container_put(self, host, container_name, host_path, container_path):
         """
@@ -526,7 +549,7 @@ class DockerManager:
         :param host_path:       remote host path
         :param container_path:  path inside container
         """
-        self._cp(host, host_path, '{}:{}'.format(container_name, container_path))
+        self._cp(host, host_path, f'{container_name}:{container_path}')
 
     def container_get(self, host, container_name, container_path, host_path):
         """
@@ -537,23 +560,23 @@ class DockerManager:
         :param container_path:  path inside container
         :param host_path:       remote host path
         """
-        self._cp(host, '{}:{}'.format(container_name, container_path), host_path)
+        self._cp(host, f'{container_name}:{container_path}', host_path)
 
     def ls(self, host, container_name, path):
-        out = self.ssh.exec_on_host(host, container_name, ['ls {}'.format(path)])
+        out = self.exec_in_container([f'ls {path}'], container_name, host)
         files = ' '.join(out).replace('\n', '')
         if not files:
             return []
         files = files.split(' ')
-        log_print('LS list: {}'.format(' '.join(files)))
+        log_print(f'LS list: {" ".join(files)}')
         return [file.strip() for file in files]
 
     def network_disconnect(self, host=None, container_name=None, network_name=None):
-        cmd = 'docker network disconnect -f {} {}'.format(network_name, container_name)
+        cmd = f'docker network disconnect -f {network_name} {container_name}'
         self.ssh.exec_on_host(host, [cmd])
 
     def network_connect(self, host=None, container_name=None, network_name=None):
-        cmd = 'docker network connect {} {}'.format(network_name, container_name)
+        cmd = f'docker network connect {network_name} {container_name}'
         self.ssh.exec_on_host(host, [cmd])
 
     def create_swarm_network(self, network_name=None, driver=None):
@@ -577,17 +600,17 @@ class DockerManager:
                 clear_res = []
                 if swarm_init_res and host in swarm_init_res and type(swarm_init_res[host]) == type([]):
                     clear_res = [line.strip() for line in swarm_init_res[host][0].splitlines()]
-                assert [line for line in clear_res if 'Swarm initialized' in line],\
-                    'Failed to initialize swarm on {}: {}'.format(host, ' '.join(clear_res))
+                assert [line for line in clear_res if 'Swarm initialized' in line], \
+                    f'Failed to initialize swarm on {host}: {" ".join(clear_res)}'
                 add_manager_init_com = [line for line in clear_res if line.startswith('docker')]
                 assert add_manager_init_com, 'Failed to find join command in init output: {}'.format(' '.join(clear_res))
                 add_manager_init_com = add_manager_init_com[0]
-                log_print('added swarm manager: {}'.format(host))
+                log_print(f'added swarm manager: {host}')
             else:
                 node_join_res = self.ssh.exec_on_host(host, [add_manager_init_com])
                 assert [line for line in node_join_res[host] if 'node joined a swarm' in line], \
-                    'Failed to join node {}'.format(host)
-                log_print('added swarm worker: {}'.format(host))
+                    f'Failed to join node {host}'
+                log_print(f'added swarm worker: {host}')
 
     def deploy(self, data, deploy_name='ignite'):
         stack_local_path = join(self.config['rt']['test_module_dir'], 'stack.yaml')
@@ -595,7 +618,7 @@ class DockerManager:
         self.ssh.upload_on_host(self.swarm_manager, [stack_local_path], self.config['rt']['remote']['test_dir'])
         self.stack_remote_path = join(self.config['rt']['remote']['test_dir'], 'stack.yaml')
 
-        cmd = 'docker stack deploy -c {} {}'.format(self.stack_remote_path, deploy_name)
+        cmd = f'docker stack deploy -c {self.stack_remote_path} {deploy_name}'
         self.ssh.exec_on_host(self.swarm_manager, [cmd])
 
     def leave_swarm(self):
@@ -603,11 +626,11 @@ class DockerManager:
         cmd = 'docker swarm leave -f'
         res = self.ssh.exec([cmd])
 
-    def create_service(self, host, image_name, **kwargs):
+    def create_service(self, host, image_name, dns_name, **kwargs):
         start_cmd = 'docker service create --name {name} --no-healthcheck {params} {kw_params} {host} {image} {cmd}'
 
         image, params, kw_params, commands, container_name = self.get_params(image_name, kwargs)
-        host_constraint = "--constraint 'node.hostname==lab{}.gridgain.local'".format(host.split('.')[-1:][0])
+        host_constraint = f"--constraint 'node.hostname=={dns_name}'"
 
         start_cmd = start_cmd.format(
             name=container_name,
@@ -626,18 +649,13 @@ class DockerManager:
         assert self.wait_for(
             lambda hosts: [con['name'] for con in hosts.get(host, []) if container_name in con['name']],
             lambda: self.get_running_containers()
-        ), 'Failed to start container {}'.format(container_name)
+        ), f'Failed to start container {container_name}'
 
         for container in self.get_running_containers()[host]:
             if container_name in container['name']:
-                log_file = "{}/{}".format(logs_dir, "{}.log".format(container['name']))
+                log_file = f"{logs_dir}/{'{}.log'.format(container['name'])}"
                 running_container = container
-                write_logs_command = "cd {log_dir}; " \
-                                     "nohup " \
-                                     "  docker logs -f {container_id} " \
-                                     "> {log} 2>&1 &".format(log_dir=logs_dir,
-                                                             container_id=container['id'],
-                                                             log=log_file)
+                write_logs_command = f"cd {logs_dir}; nohup  docker logs -f {container['id']} > {log_file} 2>&1 &"
                 self.ssh.exec_on_host(host, [write_logs_command])
                 break
 
@@ -696,4 +714,3 @@ class DockerManager:
             else:
                 return len(running)
         return -1
-
