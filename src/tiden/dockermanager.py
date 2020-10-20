@@ -382,7 +382,7 @@ class DockerManager:
         kwargs["kw_params"] = _kw_params
 
         if kwargs.get("tag"):
-            image = f"{image_name}:{kwargs['tag']}"
+            image = f"{image_name}:{kwargs.get('tag', 'latest')}"
         if kwargs.get("network"):
             kw = kwargs.get("kw_params", {})
             kw["network"] = kwargs["network"]
@@ -419,7 +419,7 @@ class DockerManager:
 
         return image, params, kw_params, commands, container_name
 
-    def exec_in_container(self, cmd, container, host=None, log_path=None):
+    def exec_in_container(self, cmd: str, container, host=None, log_path=None):
         """
         Execute command into container
         :param cmd:             command
@@ -436,7 +436,9 @@ class DockerManager:
         if log_path is not None:
             exec_cmd = f'nohup {exec_cmd} > {log_path} 2>&1 &'
         output = self.ssh.exec_on_host(host, [exec_cmd])[host]
-        return output[0] if len(output) == 1 else ""
+        output = output[0] if len(output) == 1 else ""
+        assert 'no such container' in output.lower(), f'Failed to find {container} to execute cmd: {cmd}'
+        return output
 
     def _find_host(self, searched_container):
         """
@@ -546,7 +548,7 @@ class DockerManager:
         self._cp(host, f'{container_name}:{container_path}', host_path)
 
     def ls(self, host, container_name, path):
-        out = self.ssh.exec_on_host(host, container_name, ['ls {}'.format(path)])
+        out = self.exec_in_container([f'ls {path}'], container_name, host)
         files = ' '.join(out).replace('\n', '')
         if not files:
             return []
