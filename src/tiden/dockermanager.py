@@ -334,6 +334,18 @@ class DockerManager:
                                 commands -  commands list which need to after image start
                                             and declare which process would be main in container
                                 volume - map directory in container
+                                    examples:
+                                    {
+                                        '/host/path/to/file_or_directory': '/path/inside/container'
+                                    }
+                                    or
+                                    {
+                                        '/host/path/to/file_or_directory': {
+                                            'path': '/path/inside/container',
+                                            'mode': 'ro'
+                                        }
+                                    }
+
                                 params - custom params (-i, -t)
 
         :return:                tuple(Image ID, log file path, image name)
@@ -404,7 +416,10 @@ class DockerManager:
         if kwargs.get("volume"):
             param = []
             for local_dir, container_dir in kwargs["volume"].items():
-                param.append(f"-v {local_dir}:{container_dir}")
+                if isinstance(container_dir, dict):
+                    param.append(f"-v {local_dir}:{container_dir['path']}:{container_dir['mode']}")
+                else:
+                    param.append(f"-v {local_dir}:{container_dir}")
             kw_params += f"{kw_params} {' '.join(param)}"
         if kwargs.get('ekw_params'):
             for k, v in kwargs['ekw_params'].items():
