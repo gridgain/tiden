@@ -437,7 +437,7 @@ class DockerManager:
             exec_cmd = f'nohup {exec_cmd} > {log_path} 2>&1 &'
         output = self.ssh.exec_on_host(host, [exec_cmd])[host]
         output = output[0] if len(output) == 1 else ""
-        assert 'no such container' in output.lower(), f'Failed to find {container} to execute cmd: {cmd}'
+        assert 'no such container' not in output.lower(), f'Failed to find {container} to execute cmd: {cmd}'
         return output
 
     def _find_host(self, searched_container):
