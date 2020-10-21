@@ -409,68 +409,75 @@ class DockerManager:
         self.ssh.exec_on_host(host, [write_logs_command])
         return log_file
 
-    def get_params(self, image_name, **kwargs):
-        params = ""
-        kw_params = ""
-        image = image_name
+    def get_params(self, image_name,
+                   name=None,
+                   tag=None,
+                   kw_params=None,
+                   command=None,
+                   bash_commands=None,
+                   volume=None,
+                   network=None,
+                   params=None,
+                   skw_params=None,
+                   ports=None,
+                   ekw_params=None,
+                   dparams=None,
+                   rm=None,
+                   env=None):
+
+        def default(val, default_value):
+            return default_value if val is None else val
 
         # setting up unique image name (adding UUID4 at the name end)
-        _kw_params = kwargs["kw_params"] if kwargs["kw_params"] is None else {}
-        if kwargs["skw_params"] is None:
-            kwargs["skw_params"] = []
-        if _kw_params is None:
-            _kw_params = {}
-        container_name = kwargs.get("name", f"{sub('/|:', '-', image_name)}-{str(uuid4())[:8]}")
+        kw_params = default(kw_params, {})
+        skw_params = default(skw_params, [])
+        dparams = default(dparams, [])
+        container_name = default(name, f"{sub('/|:', '-', image_name)}-{str(uuid4())[:8]}")
+        kw_params['name'] = container_name
+        params_str = ''
+        kw_params_str = ''
 
-        _kw_params["name"] = container_name
-        kwargs["kw_params"] = _kw_params
-
-        if kwargs.get("tag"):
-            image = f"{image_name}:{kwargs.get('tag', 'latest')}"
-        if kwargs.get("network"):
-            kw = kwargs.get("kw_params", {})
-            kw["network"] = kwargs["network"]
-            kwargs["kw_params"] = kw
-        if kwargs.get('ports'):
-            kwargs['skw_params'] = kwargs.get('skw_params', [])
-            for host_port, container_port in kwargs['ports']:
-                kwargs['skw_params'].append(('p', f'{host_port}:{container_port}'))
-        if kwargs.get('env'):
-            for env_key, env_param in kwargs['env'].items():
-                kwargs['skw_params'].append(('e', f'{env_key}={env_param}'))
-        if kwargs.get("kw_params"):
-            param_list = []
-            for key, value in kwargs.get("kw_params", {}).items():
-                param_list.append(f"--{key} {value}")
-            for key, value in kwargs.get("skw_params", []):
-                param_list.append(f"-{key} {value}")
-            kw_params += f" {' '.join(param_list)} "
-        if kwargs.get("volume"):
-            param = []
-            for local_dir, container_dir in kwargs["volume"].items():
+        if tag:
+            image_name = f"{image_name}:{default(tag, 'latest')}"
+        if network:
+            kw_params["network"] = network
+        if ports:
+            for host_port, container_port in ports.items():
+                skw_params.append(('p', f'{host_port}:{container_port}'))
+        if env:
+            for env_key, env_param in env.items():
+                skw_params.append(('e', f'{env_key}={env_param}'))
+        if volume:
+            for local_dir, container_dir in volume.items():
                 if isinstance(container_dir, dict):
-                    param.append(f"-v {local_dir}:{container_dir['path']}:{container_dir['mode']}")
+                    skw_params.append(('v', f"{local_dir}:{container_dir['path']}:{container_dir['mode']}"))
                 else:
-                    param.append(f"-v {local_dir}:{container_dir}")
-            kw_params += f"{kw_params} {' '.join(param)}"
-        if kwargs.get('ekw_params'):
-            for k, v in kwargs['ekw_params'].items():
-                kw_params += f' --{k}={v} '
-        if kwargs.get("params"):
-            for param in kwargs["params"]:
-                params += f" -{param} "
-        if kwargs.get("dparams"):
-            for param in kwargs["dparams"]:
-                params += f" --{param} "
+                    skw_params.append(('v', f"{local_dir}:{container_dir}"))
+        if ekw_params:
+            for k, v in ekw_params.items():
+                kw_params_str += f' --{k}={v} '
+        if params:
+            for param in params:
+                params_str += f" -{param} "
+        if rm:
+            dparams.append('rm')
+        if dparams:
+            for param in dparams:
+                params_str += f" --{param} "
+
+        for key, value in kw_params.items():
+            kw_params_str += f" --{key} {value} "
+        for key, value in skw_params:
+            kw_params_str += f" -{key} {value} "
 
         # if need to redefine entry command by your own
-        command = ''
-        if kwargs.get('command'):
-            command = kwargs['command']
-            if kwargs.get('bash_commands', True):
-                command = f'bash -c "{command}"'
+        command_str = ''
+        if command:
+            command_str = command
+            if default(bash_commands, True):
+                command_str = f'bash -c "{command_str}"'
 
-        return image, params, kw_params, command, container_name
+        return image_name, params_str, kw_params_str, command_str, container_name
 
     def exec_in_container(self, cmd: str, container, host=None, log_path=None):
         """
