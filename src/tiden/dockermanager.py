@@ -17,6 +17,7 @@
 from os.path import basename, join
 from pprint import PrettyPrinter
 from re import match
+from typing import List
 from uuid import uuid4
 
 from .sshpool import SshPool
@@ -82,7 +83,7 @@ class DockerManager:
                         }, ...)
         """
         cmd = [
-            f'docker ps --format \"{{.ID}} | {{.Image}} | {{.Status}} | {{.Names}} | {{.Ports}}\" {additional_key} -a'
+            f'docker ps --format \"{{{{.ID}}}} | {{{{.Image}}}} | {{{{.Status}}}} | {{{{.Names}}}} | {{{{.Ports}}}}\" {additional_key} -a'
         ]
         if host:
             res = self.ssh.exec_on_host(host, cmd)
@@ -237,8 +238,8 @@ class DockerManager:
             params += f" -f {dockerfile_path}"
         if build_args:
             for k, v in build_args.items():
-                params += f' --build-arg {k}={v}'
-        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 {self.config['rt']['remote']['test_dir']}/build_{name}.log"
+                params += f' --build-arg "{k}={v}"'
+        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 > {self.config['rt']['remote']['test_dir']}/build_{name}.log"
         return self.ssh.exec_on_host(host, [cmd])
 
     def list_images(self, host=None):
@@ -321,43 +322,71 @@ class DockerManager:
         commands = [load_cmd.format(path) for path in packed_image_paths]
         self.ssh.exec(commands)
 
-    def run(self, image_name, host, **kwargs):
+    def run(self, image_name, host,
+            name: str = None,
+            tag: str = None,
+            kw_params: dict = None,
+            command: str = None,
+            bash_commands: str = None,
+            volume: dict = None,
+            network: str = None,
+            params: list = None,
+            skw_params: List[list] = None,
+            ports: dict = None,
+            ekw_params: dict = None,
+            dparams: list = None,
+            rm: bool = False,
+            log_file: str = None,
+            env: dict = None):
         """
         Run container from image
-        Log all container data into log
 
-        :param image_name:      source image name
-        :param host:            host where need to run container
-        :param kwargs:          tag - custom image tag
-                                network - select different network
-                                kw_params - custom params (--param_key param_value)
-                                commands -  commands list which need to after image start
-                                            and declare which process would be main in container
-                                volume - map directory in container
-                                    examples:
-                                    {
-                                        '/host/path/to/file_or_directory': '/path/inside/container'
-                                    }
-                                    or
-                                    {
-                                        '/host/path/to/file_or_directory': {
-                                            'path': '/path/inside/container',
-                                            'mode': 'ro'
-                                        }
-                                    }
+        :param env:             -e KEY=VALUE:   additional enviroment variables
+        :param rm:              --rm:           remove container after main docker process will be done
+        :param dparams:         --some_param:   list of optional parameters with a double hyphen
+        :param ekw_params:      --KEY=VALUE:    prams with equal
+        :param ports:           -p 8080:8080:   ports mapping
+        :param skw_params:      -p 8080:8080:   list of key-value params with single character
+        :param params:          -t:             single character params
+        :param network:         --network host: network map name
+        :param volume:          -v path:path:   mount point
+        :param command:         docker run alpine tail -f /dev/null
+                                                run container with started command
+        :param bash_commands:   docker run alpine bash -c "tail -f /dev/null"
+                                                run container with started command in "" (for long cmds with special characters)
+        :param kw_params:       --KEY VALUE:    params without equals
+        :param name:            --name          image name
+        :param image_name:                      source image name
+        :param tag:                             image tag
+        :param host:                            host where need to run container
+        :param log_file:                        log file path on remote host
 
-                                params - custom params (-i, -t)
-
-        :return:                tuple(Image ID, log file path, image name)
+        :return:                tuple(container ID, log file path, container name)
         """
 
         run_command = "docker run -d {params} {kw_params} {image} {commands}"
-        image, params, kw_params, commands, container_name = self.get_params(image_name, kwargs)
+        image, params, kw_params, command, container_name = self.get_params(
+            image_name,
+            name=name,
+            tag=tag,
+            kw_params=kw_params,
+            command=command,
+            bash_commands=bash_commands,
+            volume=volume,
+            network=network,
+            params=params,
+            skw_params=skw_params,
+            ports=ports,
+            ekw_params=ekw_params,
+            dparams=dparams,
+            rm=rm,
+            env=env
+        )
 
         cmd = run_command.format(params=params,
                                  kw_params=kw_params,
                                  image=image,
-                                 commands=commands)
+                                 commands=command)
 
         log_print(f"Starting container '{container_name}' from image '{image_name}' on {host}")
         log_print(f"Cmd: {cmd}", color='debug')
@@ -365,14 +394,14 @@ class DockerManager:
         if len(output) != 1:
             raise AssertionError(f"Can't run image {image_name} on host:\n{host}")
 
-        image_id = output[-1:][0].strip().splitlines()[-1:][0]
-        assert len(image_id) > 32 and match(r'^[a-f0-9]*$', image_id), f"Image ID is not correct: '{image_id}'"
+        container_id = output[-1:][0].strip().splitlines()[-1:][0]
+        assert len(container_id) > 32 and match(r'^[a-f0-9]*$', container_id), f"Image ID is not correct: '{container_id}'"
 
         # log container output
-        log_file = kwargs.get('log_file', f"{self.config['rt']['remote']['test_dir']}/{container_name}.log")
-        log_file = self.log_container_output(host, image_id, log_file)
+        log_file_path = log_file if log_file else f"{self.config['rt']['remote']['test_dir']}/{container_name}.log"
+        log_file_path = self.log_container_output(host, container_id, log_file_path)
 
-        return image_id, log_file, kwargs["kw_params"]["name"]
+        return container_id, log_file_path, container_name
 
     def log_container_output(self, host, image_id, log_file):
         logs_dir = self.config["rt"]["remote"]["test_dir"]
@@ -380,59 +409,75 @@ class DockerManager:
         self.ssh.exec_on_host(host, [write_logs_command])
         return log_file
 
-    def get_params(self, image_name, kwargs):
-        params = ""
-        kw_params = ""
-        commands = ""
-        image = image_name
+    def get_params(self, image_name,
+                   name=None,
+                   tag=None,
+                   kw_params=None,
+                   command=None,
+                   bash_commands=None,
+                   volume=None,
+                   network=None,
+                   params=None,
+                   skw_params=None,
+                   ports=None,
+                   ekw_params=None,
+                   dparams=None,
+                   rm=None,
+                   env=None):
+
+        def default(val, default_value):
+            return default_value if val is None else val
 
         # setting up unique image name (adding UUID4 at the name end)
-        _kw_params = kwargs.get("kw_params", {})
-        container_name = kwargs.get("name", f"{sub('/|:', '-', image_name)}-{str(uuid4())[:8]}")
+        kw_params = default(kw_params, {})
+        skw_params = default(skw_params, [])
+        dparams = default(dparams, [])
+        container_name = default(name, f"{sub('/|:', '-', image_name)}-{str(uuid4())[:8]}")
+        kw_params['name'] = container_name
+        params_str = ''
+        kw_params_str = ''
 
-        _kw_params["name"] = container_name
-        kwargs["kw_params"] = _kw_params
-
-        if kwargs.get("tag"):
-            image = f"{image_name}:{kwargs.get('tag', 'latest')}"
-        if kwargs.get("network"):
-            kw = kwargs.get("kw_params", {})
-            kw["network"] = kwargs["network"]
-            kwargs["kw_params"] = kw
-        if kwargs.get('ports'):
-            kwargs['skw_params'] = kwargs.get('skw_params', [])
-            for host_port, container_port in kwargs['ports']:
-                kwargs['skw_params'].append(('p', f'{host_port}:{container_port}'))
-        if kwargs.get("kw_params"):
-            param_list = []
-            iter_params = [kwargs.get("kw_params", {}).items(), kwargs.get("skw_params", [])]
-            for iter_param in iter_params:
-                for key, value in iter_param:
-                    special_symbol = '' if len(key) == 1 else '-'
-                    param_list.append(f"{special_symbol}-{key} {value}")
-            kw_params += ' '.join(param_list)
-        if kwargs.get("commands"):
-            commands = " ".join(kwargs["commands"])
-        if kwargs.get("volume"):
-            param = []
-            for local_dir, container_dir in kwargs["volume"].items():
+        if tag:
+            image_name = f"{image_name}:{default(tag, 'latest')}"
+        if network:
+            kw_params["network"] = network
+        if ports:
+            for host_port, container_port in ports.items():
+                skw_params.append(('p', f'{host_port}:{container_port}'))
+        if env:
+            for env_key, env_param in env.items():
+                skw_params.append(('e', f'{env_key}={env_param}'))
+        if volume:
+            for local_dir, container_dir in volume.items():
                 if isinstance(container_dir, dict):
-                    param.append(f"-v {local_dir}:{container_dir['path']}:{container_dir['mode']}")
+                    skw_params.append(('v', f"{local_dir}:{container_dir['path']}:{container_dir['mode']}"))
                 else:
-                    param.append(f"-v {local_dir}:{container_dir}")
-            kw_params += f"{kw_params} {' '.join(param)}"
-        if kwargs.get('ekw_params'):
-            for k, v in kwargs['ekw_params'].items():
-                kw_params += f' --{k}={v} '
-        if kwargs.get("params"):
-            for param in kwargs["params"]:
-                params += f" -{param} "
+                    skw_params.append(('v', f"{local_dir}:{container_dir}"))
+        if ekw_params:
+            for k, v in ekw_params.items():
+                kw_params_str += f' --{k}={v} '
+        if params:
+            for param in params:
+                params_str += f" -{param} "
+        if rm:
+            dparams.append('rm')
+        if dparams:
+            for param in dparams:
+                params_str += f" --{param} "
+
+        for key, value in kw_params.items():
+            kw_params_str += f" --{key} {value} "
+        for key, value in skw_params:
+            kw_params_str += f" -{key} {value} "
 
         # if need to redefine entry command by your own
-        if kwargs.get('bash_commands', True) and commands:
-            commands = f'bash -c "{commands}"'
+        command_str = ''
+        if command:
+            command_str = command
+            if default(bash_commands, True):
+                command_str = f'bash -c "{command_str}"'
 
-        return image, params, kw_params, commands, container_name
+        return image_name, params_str, kw_params_str, command_str, container_name
 
     def exec_in_container(self, cmd: str, container, host=None, log_path=None):
         """
@@ -626,10 +671,63 @@ class DockerManager:
         cmd = 'docker swarm leave -f'
         res = self.ssh.exec([cmd])
 
-    def create_service(self, host, image_name, dns_name, **kwargs):
+    def create_service(self, host, image_name, dns_name,
+                       name: str = None,
+                       tag: str = None,
+                       kw_params: dict = None,
+                       command: str = None,
+                       bash_commands: str = None,
+                       volume: dict = None,
+                       network: str = None,
+                       params: list = None,
+                       skw_params: List[list] = None,
+                       ports: dict = None,
+                       ekw_params: dict = None,
+                       dparams: list = None,
+                       rm: bool = False,
+                       env: dict = None):
+        """
+        :param dns_name:                        host DNS name where needs to run service
+        :param env:             -e KEY=VALUE:   additional enviroment variables
+        :param rm:              --rm:           remove container after main docker process will be done
+        :param dparams:         --some_param:   list of optional parameters with a double hyphen
+        :param ekw_params:      --KEY=VALUE:    prams with equal
+        :param ports:           -p 8080:8080:   ports mapping
+        :param skw_params:      -p 8080:8080:   list of key-value params with single character
+        :param params:          -t:             single character params
+        :param network:         --network host: network map name
+        :param volume:          -v path:path:   mount point
+        :param command:         docker run alpine tail -f /dev/null
+                                                run container with started command
+        :param bash_commands:   docker run alpine bash -c "tail -f /dev/null"
+                                                run container with started command in "" (for long cmds with special characters)
+        :param kw_params:       --KEY VALUE:    params without equals
+        :param name:            --name          image name
+        :param image_name:                      source image name
+        :param tag:                             image tag
+        :param host:                            host where need to run container
+
+        :return:                tuple(container ID, log file path, container name)
+        """
         start_cmd = 'docker service create --name {name} --no-healthcheck {params} {kw_params} {host} {image} {cmd}'
 
-        image, params, kw_params, commands, container_name = self.get_params(image_name, kwargs)
+        image, params, kw_params, commands, container_name = self.get_params(
+            image_name,
+            name=name,
+            tag=tag,
+            kw_params=kw_params,
+            command=command,
+            bash_commands=bash_commands,
+            volume=volume,
+            network=network,
+            params=params,
+            skw_params=skw_params,
+            ports=ports,
+            ekw_params=ekw_params,
+            dparams=dparams,
+            rm=rm,
+            env=env
+        )
         host_constraint = f"--constraint 'node.hostname=={dns_name}'"
 
         start_cmd = start_cmd.format(
