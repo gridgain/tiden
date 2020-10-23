@@ -478,10 +478,7 @@ class DockerManager:
         # if need to redefine entry command by your own
         command_str = ''
         if command:
-            if isinstance(command, list) or isinstance(command, tuple):
-                command_str = ' '.join(command)
-            else:
-                command_str = command
+            command_str = command if isinstance(command, str) else ' '.join(command)
             if default(string_command, False):
                 command_str = f'{command_runner} "{command_str}"'
 
