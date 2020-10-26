@@ -20,7 +20,7 @@ from os.path import exists
 
 from datetime import datetime
 from itertools import cycle
-from re import search, compile
+from re import search, compile, sub
 from time import sleep, time
 from traceback import format_exc
 from zipfile import ZipFile
@@ -281,6 +281,9 @@ class Ignite(IgniteComponents, App):
                 return 'node_%d' % (node_idx)
         else:
             return 'none'
+
+    def get_folder_name_from_consistent_id(self, node_idx):
+        return sub('[.,-]', '_', self.get_node_consistent_id(node_idx))
 
     def get_base_disco_port(self):
         return 47500
