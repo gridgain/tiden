@@ -326,8 +326,9 @@ class DockerManager:
             name: str = None,
             tag: str = None,
             kw_params: dict = None,
-            command: str = None,
-            bash_commands: str = None,
+            command: str or list or tuple = None,
+            command_runner: str = 'bash -c',
+            string_command: bool = False,
             volume: dict = None,
             network: str = None,
             params: list = None,
@@ -352,8 +353,10 @@ class DockerManager:
         :param volume:          -v path:path:   mount point
         :param command:         docker run alpine tail -f /dev/null
                                                 run container with started command
-        :param bash_commands:   docker run alpine bash -c "tail -f /dev/null"
+        :param string_command:  docker run ubuntu bash -c "tail -f /dev/null"
                                                 run container with started command in "" (for long cmds with special characters)
+        :param command_runner:  docker run alpine ash -c "tail -f /dev/null"
+                                                custom shells
         :param kw_params:       --KEY VALUE:    params without equals
         :param name:            --name          image name
         :param image_name:                      source image name
@@ -371,7 +374,8 @@ class DockerManager:
             tag=tag,
             kw_params=kw_params,
             command=command,
-            bash_commands=bash_commands,
+            string_command=string_command,
+            command_runner=command_runner,
             volume=volume,
             network=network,
             params=params,
@@ -414,7 +418,8 @@ class DockerManager:
                    tag=None,
                    kw_params=None,
                    command=None,
-                   bash_commands=None,
+                   command_runner=None,
+                   string_command=None,
                    volume=None,
                    network=None,
                    params=None,
@@ -473,9 +478,9 @@ class DockerManager:
         # if need to redefine entry command by your own
         command_str = ''
         if command:
-            command_str = command
-            if default(bash_commands, True):
-                command_str = f'bash -c "{command_str}"'
+            command_str = command if isinstance(command, str) else ' '.join(command)
+            if default(string_command, False):
+                command_str = f'{command_runner} "{command_str}"'
 
         return image_name, params_str, kw_params_str, command_str, container_name
 
@@ -675,8 +680,9 @@ class DockerManager:
                        name: str = None,
                        tag: str = None,
                        kw_params: dict = None,
-                       command: str = None,
-                       bash_commands: str = None,
+                       command: str or list or tuple = None,
+                       command_runner: str = 'bash -c',
+                       string_command: bool = False,
                        volume: dict = None,
                        network: str = None,
                        params: list = None,
@@ -699,8 +705,10 @@ class DockerManager:
         :param volume:          -v path:path:   mount point
         :param command:         docker run alpine tail -f /dev/null
                                                 run container with started command
-        :param bash_commands:   docker run alpine bash -c "tail -f /dev/null"
+        :param string_command:  docker run ubuntu bash -c "tail -f /dev/null"
                                                 run container with started command in "" (for long cmds with special characters)
+        :param command_runner:  docker run alpine ash -c "tail -f /dev/null"
+                                                custom shells
         :param kw_params:       --KEY VALUE:    params without equals
         :param name:            --name          image name
         :param image_name:                      source image name
@@ -717,7 +725,8 @@ class DockerManager:
             tag=tag,
             kw_params=kw_params,
             command=command,
-            bash_commands=bash_commands,
+            string_command=string_command,
+            command_runner=command_runner,
             volume=volume,
             network=network,
             params=params,
@@ -812,3 +821,7 @@ class DockerManager:
             else:
                 return len(running)
         return -1
+
+    def remove_all_images(self):
+        for host in self.ssh.hosts:
+            self.remove_images(host)
