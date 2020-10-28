@@ -23,6 +23,7 @@ from os.path import exists, basename
 from re import sub
 from time import time
 from traceback import format_exc
+from typing import List
 from uuid import uuid4
 
 from requests import post
@@ -132,28 +133,19 @@ class InnerReportConfig:
 
 
 class Step:
-    def __init__(self, cls, name, parameters=None, **kwargs):
+    def __init__(self, cls, name, parameters: List[dict] = None, expected_exceptions: list = None):
         self.name = name
         self.cls = cls
-        self.kwargs = kwargs
+        self.expected_exceptions = expected_exceptions or []
         self.parameters = parameters or []
         self.unique = None
-        self.status = None
+        self.status = True
         self.stacktrace = ""
 
     def __enter__(self):
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
             log_print(f'Step {self.name} started', color='debug')
-        if getattr(self.cls, '_secret_report_storage', None):
-            report: InnerReportConfig = getattr(self.cls, '_secret_report_storage', None)
-            self.unique = report.start_step(self.name, self.parameters)
-            setattr(self.cls, '_secret_report_storage', report)
-        elif getattr(self.cls, '_parent_cls', None) and getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None):
-            report = getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None)
-            self.unique = report.start_step(self.name, self.parameters)
-            parent_cls = getattr(self.cls, '_parent_cls')
-            setattr(parent_cls, '_secret_report_storage', report)
-            setattr(self.cls, '_parent_cls', parent_cls)
+        _, self.unique = _change_report_storage(self.cls, lambda report: report.start_step(self.name, self.parameters))
         return self
 
     def failed(self, stacktrace=""):
@@ -164,20 +156,17 @@ class Step:
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
             log_print(f'Step {self.name} ended', color='debug')
 
-        step_result = exc_type is None if self.status is None else self.status
-        status_str = 'passed' if step_result else 'failed'
-        stacktrace = self.stacktrace[:5000] if self.status is not None else format_exc()[:5000]
+        if exc_val:
+            if exc_type not in self.expected_exceptions:
+                self.stacktrace = format_exc()[:5000]
+                self.status = False
 
-        if getattr(self.cls, '_secret_report_storage', None):
-            report: InnerReportConfig = getattr(self.cls, '_secret_report_storage', None)
-            report.end_step(self.unique, status_str, stacktrace)
-            setattr(self.cls, '_secret_report_storage', report)
-        elif getattr(self.cls, '_parent_cls', None) and getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None):
-            report: InnerReportConfig = getattr(getattr(self.cls, '_parent_cls'), '_secret_report_storage', None)
-            report.end_step(self.unique, status_str, stacktrace)
-            parent_cls = getattr(self.cls, '_parent_cls')
-            setattr(parent_cls, '_secret_report_storage', report)
-            setattr(self.cls, '_parent_cls', parent_cls)
+        if len(self.stacktrace) > 5000:
+            self.stacktrace = self.stacktrace[:5000]
+
+        if self.unique:
+            status_str = 'passed' if self.status else 'failed'
+            _change_report_storage(self.cls, lambda report: report.end_step(self.unique, status_str, self.stacktrace))
 
         if exc_type is not None:
             raise exc_val
@@ -207,22 +196,26 @@ def add_attachment(cls, name, data, attachment_type: AttachmentType = Attachment
         'type': attachment_type.value
     }
     report: InnerReportConfig
+    _change_report_storage(cls, lambda report: report.add_attachment(attachment))
+
+
+def _change_report_storage(cls, action):
     if getattr(cls, '_secret_report_storage', None):
         report = getattr(cls, '_secret_report_storage', None)
-        report.add_attachment(attachment)
+        result = action(report)
         setattr(cls, '_secret_report_storage', report)
-    elif getattr(cls, '_parent_cls', None) and getattr(getattr(cls, '_parent_cls'), '_secret_report_storage', None):
-        report = getattr(getattr(cls, '_parent_cls'), '_secret_report_storage', None)
-        report.add_attachment(attachment)
-        parent_cls = getattr(cls, '_parent_cls')
-        setattr(parent_cls, '_secret_report_storage', report)
-        setattr(cls, '_parent_cls', parent_cls)
+        return cls, result
+    elif getattr(cls, '_parent_cls', None):
+        changed_cls, res = _change_report_storage(getattr(cls, '_parent_cls', None), action)
+        if changed_cls:
+            setattr(cls, '_parent_cls', changed_cls)
+            return cls, res
+    return cls, None
 
 
 def step(name=None, attach_parameters=False, expected_exceptions: list = None):
     def inner(fn):
         def _inner(*args, **kwargs):
-            report: InnerReportConfig = None
             step_id = None
             step_passed = True
             stacktrace = ''
@@ -242,16 +235,7 @@ def step(name=None, attach_parameters=False, expected_exceptions: list = None):
                         parameters.append({'name': str(kw), 'value': str(kwarg_value)})
             step_name = f'{step_name[:1].upper()}{step_name[1:]}'
             if args:
-                if getattr(args[0], '_secret_report_storage', None):
-                    report = getattr(args[0], '_secret_report_storage', None)
-                    step_id = report.start_step(step_name, parameters)
-                    setattr(args[0], '_secret_report_storage', report)
-                elif getattr(args[0], '_parent_cls', None) and getattr(getattr(args[0], '_parent_cls'), '_secret_report_storage', None):
-                    report = getattr(getattr(args[0], '_parent_cls'), '_secret_report_storage', None)
-                    step_id = report.start_step(step_name, parameters)
-                    parent_cls = getattr(args[0], '_parent_cls')
-                    setattr(parent_cls, '_secret_report_storage', report)
-                    setattr(args[0], '_parent_cls', parent_cls)
+                _, step_id = _change_report_storage(args[0], lambda report: report.start_step(step_name, parameters))
             try:
                 result = fn(*args, **kwargs)
             except Exception as e:
@@ -265,17 +249,8 @@ def step(name=None, attach_parameters=False, expected_exceptions: list = None):
                     step_passed = this_is_expected_exception
                 raise
             finally:
-                if report is not None:
-                    if getattr(args[0], '_secret_report_storage', None):
-                        report = getattr(args[0], '_secret_report_storage', None)
-                        report.end_step(step_id, 'passed' if step_passed else 'failed', stacktrace)
-                        setattr(args[0], '_secret_report_storage', report)
-                    elif getattr(args[0], '_parent_cls', None) and getattr(getattr(args[0], '_parent_cls'), '_secret_report_storage', None):
-                        report = getattr(getattr(args[0], '_parent_cls'), '_secret_report_storage', None)
-                        report.end_step(step_id, 'passed' if step_passed else 'failed', stacktrace)
-                        parent_cls = getattr(args[0], '_parent_cls')
-                        setattr(parent_cls, '_secret_report_storage', report)
-                        setattr(args[0], '_parent_cls', parent_cls)
+                if step_id:
+                    _change_report_storage(args[0], lambda report: report.end_step(step_id, 'passed' if step_passed else 'failed', stacktrace))
             return result
         return _inner
     return inner
