@@ -77,6 +77,55 @@ def test_default_step():
     assert actual_step['status'] == 'passed'
 
 
+def test_default_embedded_step():
+    class A:
+        _secret_report_storage = InnerReportConfig()
+
+        @step('Some method name')
+        def some_method(self):
+            self.some_embedded_method()
+
+        @step('Embedded')
+        def some_embedded_method(self):
+            pass
+
+    a = A()
+    a.some_method()
+    added_steps = a._secret_report_storage.steps
+    assert len(added_steps) == 1
+    actual_step = added_steps[0]
+    assert len(actual_step['children']) == 1
+    embedded_step = actual_step['children'][0]
+    assert embedded_step['name'] == 'Embedded'
+    assert embedded_step['status'] == 'passed'
+
+
+def test_default_embedded_failed_step():
+    class A:
+        _secret_report_storage = InnerReportConfig()
+
+        @step('Some method name')
+        def some_method(self):
+            self.some_embedded_method()
+
+        @step('Embedded failed')
+        def some_embedded_method(self):
+            raise AssertionError('Bad bad bad')
+
+    a = A()
+    with pytest.raises(AssertionError):
+        a.some_method()
+
+    added_steps = a._secret_report_storage.steps
+    assert len(added_steps) == 1
+    actual_step = added_steps[0]
+    assert len(actual_step['children']) == 1
+    embedded_step = actual_step['children'][0]
+    assert embedded_step['name'] == 'Embedded failed'
+    assert embedded_step['status'] == 'failed'
+    assert 'AssertionError: Bad bad bad' in embedded_step['stacktrace']
+
+
 def test_failed_step():
     class A:
         _secret_report_storage = InnerReportConfig()
