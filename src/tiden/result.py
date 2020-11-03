@@ -42,8 +42,6 @@ class Result:
         self.tested_class = None
         self.tested_attr = None
         self.current_test = None
-        # if kwargs.get('path') is not None:
-        #     self.tiden_path = kwargs.get('path')
         self.xunit_path = None
         self.xunit_test = None
         if kwargs.get('xunit_path') is not None:
@@ -204,31 +202,46 @@ class Result:
 
     def update_xunit(self):
         if self.xunit is not None:
+            # update counters in '<testsuite>'
             for xunit_status, status in zip(
                     ['tests', 'failures', 'errors', 'skipped'],
                     ['total', 'fail', 'error', 'skip']
             ):
                 self.xunit.attrib[xunit_status] = str(self.tests_num[status])
+            # update total run time in '<testsuite>'
             self.xunit.attrib['time'] = str(sum([int(test['time']) for test in self.tests.values()]))
+
+            tiden_current_test = self.tests[self.current_test]
+
             self.xunit_test = ET.SubElement(
                 self.xunit,
                 'testcase',
                 {
-                    'classname': "%s" % (self.tests[self.current_test]['classname']),
-                    'name': self.tests[self.current_test]['name'],
-                    "time": self.tests[self.current_test]['time']
+                    'classname': "%s" % (tiden_current_test['classname']),
+                    'name': tiden_current_test['name'],
+                    "time": tiden_current_test['time']
                 }
             )
 
-            if self.tests[self.current_test]['status'] != 'pass':
-                element_name = self.tests[self.current_test]['status']
-                if element_name == 'errors':
-                    element_name = 'error'
-                if element_name == 'fail':
-                    element_name = 'failure'
+            tiden_current_test_status = tiden_current_test['status']
+            if tiden_current_test_status != 'pass':
+                xunit_status = tiden_current_test_status
+                if tiden_current_test_status == 'skipped_no_start':
+                    # Jenkins xUnit schema does not know Tiden skipped_no_start status, replace with ordinary skipped
+                    # if we don't do this - test will be marked as 'passed' in Jenkins, which is a little confusing,
+                    # because counters won't match
+                    xunit_status = 'skipped'
+                elif tiden_current_test_status == 'errors':
+                    # same here for error (unchecked exceptions)
+                    xunit_status = 'error'
+                elif tiden_current_test_status == 'fail':
+                    # same here for failures (checked exceptions)
+                    xunit_status = 'failure'
+
+                # add resulting '<testcase>' as the child of the '<testsuite>'
                 ET.SubElement(self.xunit_test,
-                              element_name,
-                              self.tests[self.current_test]['xunit_info'])
+                              xunit_status,
+                              tiden_current_test['xunit_info'])
 
             self.flush_xunit()
 
