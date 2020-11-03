@@ -43,7 +43,6 @@ class Result:
         self.tested_attr = None
         self.current_test = None
         self.xunit_path = None
-        self.xunit_test = None
         if kwargs.get('xunit_path') is not None:
             self.xunit_path = kwargs.get('xunit_path')
             suite_attributes = {
@@ -213,13 +212,14 @@ class Result:
 
             tiden_current_test = self.tests[self.current_test]
 
-            self.xunit_test = ET.SubElement(
+            # add '<testcase>' as the child of the '<testsuite>'
+            xunit_test = ET.SubElement(
                 self.xunit,
                 'testcase',
                 {
-                    'classname': "%s" % (tiden_current_test['classname']),
+                    'classname': str(tiden_current_test['classname']),
                     'name': tiden_current_test['name'],
-                    "time": tiden_current_test['time']
+                    'time': tiden_current_test['time']
                 }
             )
 
@@ -238,8 +238,8 @@ class Result:
                     # same here for failures (checked exceptions)
                     xunit_status = 'failure'
 
-                # add resulting '<testcase>' as the child of the '<testsuite>'
-                ET.SubElement(self.xunit_test,
+                # add resulting status as the child of the '<testcase>'
+                ET.SubElement(xunit_test,
                               xunit_status,
                               tiden_current_test['xunit_info'])
 
@@ -259,19 +259,22 @@ class Result:
         for test in self.tests.keys():
             if self.tests[test].get('status') == status:
                 log_print('-------------------------------------------', color='red')
-                log_print('Test {} ({}) failed with error:'.format(test, self.tests[test].get('classname')), color='red')
+                log_print('Test {} ({}) failed with error:'.format(test, self.tests[test].get('classname')),
+                          color='red')
                 log_print('-------------------------------------------', color='red')
                 if self.tests[test].get('known_issue'):
-                    log_print('Found known issue for this test: {}'.format(self.tests[test].get('known_issue')), color='blue')
-                log_print('{}'.format(self.util_filter_escape_seqs(self.tests[test]['xunit_info']['message'])), color='red')
+                    log_print('Found known issue for this test: {}'.format(self.tests[test].get('known_issue')),
+                              color='blue')
+                log_print('{}'.format(self.util_filter_escape_seqs(self.tests[test]['xunit_info']['message'])),
+                          color='red')
 
     def get_summary(self):
         return "Passed/failed/errors/skipped/total tests are %s/%s/%s/%s/%s" % (
-                self.tests_num['pass'],
-                self.tests_num['fail'],
-                self.tests_num['error'],
-                self.tests_num['skip'],
-                self.tests_num['total'],
+            self.tests_num['pass'],
+            self.tests_num['fail'],
+            self.tests_num['error'],
+            self.tests_num['skip'],
+            self.tests_num['total'],
         )
 
     def print_summary(self):
@@ -283,7 +286,7 @@ class Result:
         log_print("*** Summary ***", color='blue')
         log_print(
             "Passed/failed/errors/skipped/total tests are {}/{}/{}/{}/{}".format
-            (
+                (
                 self.tests_num['pass'],
                 self.tests_num['fail'],
                 self.tests_num['error'],
@@ -488,4 +491,3 @@ class ResultLinesCollector:
 
     def get_lines(self):
         return self.lines
-
