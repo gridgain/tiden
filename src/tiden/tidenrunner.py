@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from re import search
 
 from .tidenpluginmanager import PluginManager
 
@@ -30,7 +31,7 @@ from traceback import format_exc
 from .runner import set_configuration_options, get_configuration_representation, get_actual_configuration
 
 from importlib import import_module
-from os import path, mkdir
+from os import path, mkdir, remove
 from time import time
 from shutil import copyfile
 from os.path import join, basename
@@ -585,6 +586,20 @@ class TidenRunner:
                                               f'-F "file=@{file_name};filename={file_name}" ' \
                                               f'{files_receiver_url}/files/add'
                                         self.ssh_pool.exec_on_host(host_ip, [cmd])
+                # save tiden.log
+                tiden_log_file = join(self.config['suite_var_dir'], 'tiden.log')
+                with open(tiden_log_file) as file:
+                    lines = file.readlines()
+                start_line = 0
+                test_method_name = self.config['rt']['test_method']
+                for line_idx, line in enumerate(lines):
+                    if search(f"{test_method_name}.+\.\.\..*started", line):
+                        start_line = line_idx
+                test_log_path = join(self.config['tmp_dir'], f'{test_method_name}.log')
+                with open(test_log_path, 'w') as f:
+                    f.write('\n'.join(lines[start_line:]))
+                add_attachment(self, 'tiden.log', test_log_path, AttachmentType.FILE)
+                remove(test_log_path)
             except:
                 log_print(f'ERROR: Failed to send report. \n{format_exc()}', color='red')
 
