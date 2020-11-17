@@ -405,7 +405,7 @@ class Ignite(IgniteComponents, App):
                 **kwargs,
             )
 
-            self.update_started_node_status(node_id)
+        self.update_started_node_status(node_id)
 
     def update_started_node_status(self, node_id):
         self.update_starting_node_attrs()
