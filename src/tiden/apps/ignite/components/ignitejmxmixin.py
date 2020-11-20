@@ -52,7 +52,7 @@ class IgniteJmxMixin(IgniteLogDataMixin):
 
     jmx = property(get_jmx_utility, None)
 
-    def _get_node_JMX_options(self, node_idx):
+    def _get_node_jmx_options(self, node_idx):
         node_jmx_port = self._get_node_jmx_port(node_idx)
         if not node_jmx_port:
             return []
@@ -64,7 +64,7 @@ class IgniteJmxMixin(IgniteLogDataMixin):
         ]
 
     def _get_base_jmx_port(self):
-        return 1100 + self.MAX_NODES_PER_HOST * 4 * (self.grid_jmx_offset - 1)
+        return 1100 + self.MAX_NODES_PER_HOST * 4 * self.grid_jmx_offset
 
     def _get_node_jmx_port(self, node_idx):
         if self.is_default_node(node_idx):

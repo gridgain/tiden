@@ -235,10 +235,12 @@ class Ignite(IgniteComponents, App):
                 if opt_name == 'jvm_options':
                     default_jvm_options = self.get_node_default_jvm_options(node_idx)
                     if not set(default_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
-                        self.nodes[node_idx]['jvm_options'].extend(default_jvm_options)
+                        self.nodes[node_idx]['jvm_options'] = list(set(default_jvm_options +
+                                                                       self.nodes[node_idx]['jvm_options']))
                     env_jvm_options = get_jvm_options(self.config['environment'], 'server_jvm_options')
                     if env_jvm_options and not set(env_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
-                        self.nodes[node_idx]['jvm_options'].extend(env_jvm_options)
+                        self.nodes[node_idx]['jvm_options'] = list(set(env_jvm_options +
+                                                                       self.nodes[node_idx]['jvm_options']))
 
     def set_activation_timeout(self, timeout):
         self.activation_timeout = timeout
@@ -314,7 +316,7 @@ class Ignite(IgniteComponents, App):
         :return: list
         """
         jvm_options = self.__class__.default_jvm_options.copy()
-        jvm_options.extend(self._get_node_JMX_options(node_idx))
+        jvm_options.extend(self._get_node_jmx_options(node_idx))
         return jvm_options
 
     @staticmethod
@@ -944,7 +946,7 @@ class Ignite(IgniteComponents, App):
             'template_variables': {
                 'consistent_id': self.get_node_consistent_id(node_idx)
             },
-            'jvm_options': self.get_node_default_jvm_options(node_idx),
+            'jvm_options': self.get_node_default_jvm_options(node_idx).copy(),
         }
         self.nodes[node_idx]['jvm_options'].extend(get_jvm_options(self.config['environment'], 'server_jvm_options'))
 
@@ -1089,7 +1091,7 @@ class Ignite(IgniteComponents, App):
         :return:
         """
         if 'jvm_options' not in self.nodes[node_idx]:
-            self.nodes[node_idx]['jvm_options'] = self.get_node_default_jvm_options(node_idx)
+            self.nodes[node_idx]['jvm_options'] = self.get_node_default_jvm_options(node_idx).copy()
         return self.nodes[node_idx]['jvm_options']
 
     def get_work_dir(self, node_id):
@@ -1145,6 +1147,7 @@ class Ignite(IgniteComponents, App):
                                                                                     'binary_rest_port'))
             repr_str += '\n\tlog: %s' % shortened_node_log
             repr_str += '\n\tignite_home: %s' % shortened_ignite_home
+            repr_str += '\n\tgrid_jmx_index: %s' % self.grid_jmx_index
         return repr_str
 
     def get_started_node_attrs(self):
