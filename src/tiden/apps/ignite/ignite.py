@@ -231,16 +231,23 @@ class Ignite(IgniteComponents, App):
         node_filter = self.define_range(node_filter)
         for node_idx in sorted(self.nodes.keys()):
             if node_filter == '*' or node_idx in node_filter:
-                self.nodes[node_idx].update({opt_name: opt_value})
-                if opt_name == 'jvm_options':
-                    default_jvm_options = self.get_node_default_jvm_options(node_idx)
-                    if not set(default_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
-                        self.nodes[node_idx]['jvm_options'] = list(set(default_jvm_options +
-                                                                       self.nodes[node_idx]['jvm_options']))
-                    env_jvm_options = get_jvm_options(self.config['environment'], 'server_jvm_options')
-                    if env_jvm_options and not set(env_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
-                        self.nodes[node_idx]['jvm_options'] = list(set(env_jvm_options +
-                                                                       self.nodes[node_idx]['jvm_options']))
+                if opt_name != 'jvm_options':
+                    self.nodes[node_idx].update({opt_name: opt_value})
+                    continue
+                default_jvm_options = self.get_node_default_jvm_options(node_idx)
+                env_jvm_options = get_jvm_options(self.config['environment'], 'server_jvm_options')
+                jvm_options_set = set(default_jvm_options + env_jvm_options + opt_value)
+                extras = []
+                # those options must be first in cmd line order if they preset
+                for extra_option in [
+                    '-XX:+UnlockCommercialFeatures',
+                    '-XX:+UnlockExperimentalVMOptions',
+                    '-XX:+UnlockDiagnosticVMOptions'
+                ]:
+                    if extra_option in jvm_options_set:
+                        jvm_options_set -= set([extra_option])
+                        extras.append(extra_option)
+                self.nodes[node_idx][opt_name] = extras + sorted(list(jvm_options_set))
 
     def set_activation_timeout(self, timeout):
         self.activation_timeout = timeout
