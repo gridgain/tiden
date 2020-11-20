@@ -39,7 +39,7 @@ from .ignitecomponents import IgniteComponents
 class Ignite(IgniteComponents, App):
     default_jvm_options = [
         '-Djava.net.preferIPv4Stack=true',
-        '-Djava.net.preferIPv6Addresses=false',
+            '-Djava.net.preferIPv6Addresses=false',
     ]
 
     activation_timeout = 240
@@ -234,7 +234,7 @@ class Ignite(IgniteComponents, App):
                 self.nodes[node_idx].update({opt_name: opt_value})
                 if opt_name == 'jvm_options':
                     default_jvm_options = self.get_node_default_jvm_options(node_idx)
-                    if not not set(default_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
+                    if not set(default_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
                         self.nodes[node_idx]['jvm_options'].extend(default_jvm_options)
                     env_jvm_options = get_jvm_options(self.config['environment'], 'server_jvm_options')
                     if env_jvm_options and not set(env_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
