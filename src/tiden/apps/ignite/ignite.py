@@ -29,17 +29,18 @@ from ..app import App
 from ..appexception import MissedRequirementException
 from ..nodestatus import NodeStatus
 from ...sshpool import SshPool
-from ...util import log_put, log_print, print_red, apply_tiden_functions, util_sleep_for_a_while
+from ...util import log_put, log_print, print_red, apply_tiden_functions, util_sleep_for_a_while, get_jvm_options, \
+    deprecated
 from ...tidenexception import TidenException
 from ...report.steps import step
 from .ignitecomponents import IgniteComponents
 
 
 class Ignite(IgniteComponents, App):
-    jvm_options = {
-        'server': '-Djava.net.preferIPv4Stack=true',
-        'client': '-Djava.net.preferIPv4Stack=true',
-    }
+    default_jvm_options = [
+        '-Djava.net.preferIPv4Stack=true',
+        '-Djava.net.preferIPv6Addresses=false',
+    ]
 
     activation_timeout = 240
 
@@ -168,7 +169,6 @@ class Ignite(IgniteComponents, App):
 
         # Each server use its own ignite_home directory
         for server_host in server_hosts:
-            # output = self.ssh.exec_on_host(server_host, ['ls -1 %s' % ignite_artifact_config['remote_path']])
             symlink_ignite[server_host] = []
             for node_idx in self.nodes.keys():
                 if self.nodes[node_idx]['host'] == server_host:
@@ -183,17 +183,6 @@ class Ignite(IgniteComponents, App):
                                 symlink_dir,
                             )
                         )
-                    # files = [item for item in output[server_host][0].split('\n') if
-                    #          item not in ignite_artifact_config['symlink_dirs']]
-                    # for file in files:
-                    #     symlink_ignite[server_host].append(
-                    #         'ln -s %s/%s %s/%s' % (
-                    #             ignite_artifact_config['remote_path'],
-                    #             file,
-                    #             server_ignite_home,
-                    #             file,
-                    #         )
-                    #     )
 
         self.ssh.exec(symlink_ignite)
         symlink_ignite.clear()
@@ -222,7 +211,6 @@ class Ignite(IgniteComponents, App):
         return '{}/{}.server.{}'.format(self.config['rt']['remote']['test_module_dir'], name, index)
 
     def on_setup(self):
-        # print('Ignite.on_setup')
         if self.is_static_inited:
             self.restore_nodes_config()
             self.client_ignite_home = self.get_client_ignite_home(self.name)
@@ -244,18 +232,13 @@ class Ignite(IgniteComponents, App):
         for node_idx in sorted(self.nodes.keys()):
             if node_filter == '*' or node_idx in node_filter:
                 self.nodes[node_idx].update({opt_name: opt_value})
-                if opt_name == 'jvm_options' and self.config['environment'].get('server_jvm_options'):
-                    if not set(self.config['environment']['server_jvm_options']) < set(
-                            self.nodes[node_idx]['jvm_options']):
-                        self.nodes[node_idx]['jvm_options'].extend(
-                            self.config['environment']['server_jvm_options']
-                        )
-
-    def set_jvm_options(self, *args):
-        if len(args) >= 1:
-            self.jvm_options['server'] = args[0]
-        if len(args) == 2:
-            self.jvm_options['client'] = args[1]
+                if opt_name == 'jvm_options':
+                    default_jvm_options = self.get_node_default_jvm_options(node_idx)
+                    if not not set(default_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
+                        self.nodes[node_idx]['jvm_options'].extend(default_jvm_options)
+                    env_jvm_options = get_jvm_options(self.config['environment'], 'server_jvm_options')
+                    if env_jvm_options and not set(env_jvm_options) < set(self.nodes[node_idx]['jvm_options']):
+                        self.nodes[node_idx]['jvm_options'].extend(env_jvm_options)
 
     def set_activation_timeout(self, timeout):
         self.activation_timeout = timeout
@@ -313,6 +296,27 @@ class Ignite(IgniteComponents, App):
         else:
             return 0
 
+    def get_node_jvm_options(self, node_idx):
+        """
+        return JVM options for given node formatted as string ready to pass to ignite.sh
+
+        for ignite.sh to understand it, each individual option must be prefixed with '-J'
+        :param node_idx:
+        :return: string
+        """
+        jvm_options_arr = self.nodes[node_idx]['jvm_options']
+        return " ".join(map(lambda x: "-J%s" % x, jvm_options_arr))
+
+    def get_node_default_jvm_options(self, node_idx):
+        """
+        return default JVM options for the node, we always set at least tcp4 and enable JMX
+        :param node_idx:
+        :return: list
+        """
+        jvm_options = self.__class__.default_jvm_options.copy()
+        jvm_options.extend(self._get_node_JMX_options(node_idx))
+        return jvm_options
+
     @staticmethod
     def define_range(range_to):
         if range_to is None:
@@ -365,15 +369,11 @@ class Ignite(IgniteComponents, App):
                           "     -J-DCONSISTENT_ID=%s " \
                           "> %s 2>&1 &"
 
-        node_jvm_options = ''
-        for jvm_opt in self.nodes[node_id]['jvm_options']:
-            node_jvm_options += "-J%s " % jvm_opt
-
         self.nodes[node_id]['run_counter'] += 1
         self.make_node_log(node_id)
 
         node_jvm_options = apply_tiden_functions(
-            node_jvm_options,
+            self.get_node_jvm_options(node_id),
             filename="%s/%s" % (self.config['rt']['remote']['test_dir'], time()),
             test_dir=self.config['rt']['remote']['test_dir'],
             grid_name=str(self.grid_name),
@@ -428,13 +428,10 @@ class Ignite(IgniteComponents, App):
                           "     -J-DCONSISTENT_ID={consistent_id} " \
                           "> {log_path} 2>&1 &"
 
-        node_jvm_options = ''
-        for jvm_opt in node['jvm_options']:
-            node_jvm_options += f"-J{jvm_opt} "
         self.nodes[idx]['run_counter'] += 1
         self.make_node_log(idx)
         node_jvm_options = apply_tiden_functions(
-            node_jvm_options,
+            self.get_node_jvm_options(idx),
             filename="{}/{}".format(self.config['rt']['remote']['test_dir'], time()),
             test_dir=self.config['rt']['remote']['test_dir'],
             grid_name=str(self.grid_name),
@@ -615,12 +612,8 @@ class Ignite(IgniteComponents, App):
 
                 self.make_node_log(node_idx)
 
-                node_jvm_options = " ".join(
-                    map(lambda x: "-J%s" % x,
-                        self.nodes[node_idx]['jvm_options']))
-
                 node_jvm_options = apply_tiden_functions(
-                    node_jvm_options,
+                    self.get_node_jvm_options(node_idx),
                     filename="%s/%s" % (self.config['rt']['remote']['test_dir'], time()),
                     test_dir=self.config['rt']['remote']['test_dir'],
                     grid_name=str(self.grid_name),
@@ -675,7 +668,7 @@ class Ignite(IgniteComponents, App):
             self.update_nodes_status(started_ids)
             self.dump_nodes_config(strict=False)
 
-    def add_additional_nodes(self, config=None, num_nodes=1, **kwargs):
+    def add_additional_nodes(self, config, num_nodes=1, **kwargs):
         """
         Adding additional nodes into existing cluster
         Node IDs starts with ADDITIONAL_NODE_START_ID
@@ -683,7 +676,10 @@ class Ignite(IgniteComponents, App):
         :param config: config of added nodes
         :param num_nodes: number of nodes
         :param kwargs:
-              name (optional) - ignite artifact name
+              name (optional) - ignite app name, optional
+              artifact_name (optional) - ignite artifact name
+              server_hosts (optional) - hosts to place additional nodes at
+
         :return: range of newly added additional nodes
         """
         assert self._setup, "Ignite.setup() should be called before using add_additional_nodes"
@@ -692,12 +688,10 @@ class Ignite(IgniteComponents, App):
             node_index += 1
         range_to = range(node_index, node_index + num_nodes)
 
-        ignite_name = self.name
-        if kwargs.get('name') and kwargs['name']:
-            ignite_name = kwargs['name']
         artifact_name = self.artifact_name
         if kwargs.get('artifact_name') and kwargs['artifact_name']:
             artifact_name = kwargs['artifact_name']
+        artifact_cfg = self.config['artifacts'][artifact_name]
 
         server_hosts = self.config['environment']['server_hosts']
         if kwargs.get('server_hosts'):
@@ -705,39 +699,33 @@ class Ignite(IgniteComponents, App):
         cycle_hosts = cycle(server_hosts)
 
         cmd = {}
-        env = self.config['environment']
-        remote_test_module_dir = self.config['rt']['remote']['test_module_dir']
 
         # rotate hosts so that additional nodes start at next free server host
         for idx in self.nodes.keys():
             host = next(cycle_hosts)
 
+        ignite_name = self.name
+        if kwargs.get('name') and kwargs['name']:
+            ignite_name = kwargs['name']
+
         for idx in range_to:
             host = next(cycle_hosts)
-            ignite_home = '%s/%s.server.%s' % (remote_test_module_dir, ignite_name, idx)
-            self.nodes[idx] = {
-                'host': host,
-                'ignite_home': ignite_home,
-                'run_counter': -1,
-                'status': NodeStatus.NEW,
-            }
-            self.nodes[idx]['jvm_options'] = []
-            if env.get('server_jvm_options'):
-                self.nodes[idx]['jvm_options'].extend(
-                    env['server_jvm_options']
-                )
+
+            self._add_server_node(server_host=host, ignite_name=ignite_name, node_idx=idx)
+
             if kwargs.get('jvm_options'):
                 self.nodes[idx]['jvm_options'].extend(
                     kwargs.get('jvm_options')
                 )
             self.nodes[idx]['config'] = "%s/%s" % (
-                remote_test_module_dir,
+                self.remote_test_module_dir,
                 config
             )
             if host not in cmd:
                 cmd[host] = []
+
+            ignite_home = self.nodes[idx]['ignite_home']
             cmd[host].append('mkdir -p %s' % ignite_home)
-            artifact_cfg = self.config['artifacts'][artifact_name]
             for symlink_dir in artifact_cfg['symlink_dirs']:
                 cmd[host].append(
                     'ln -s %s/%s %s/%s' % (
@@ -766,7 +754,7 @@ class Ignite(IgniteComponents, App):
 
             cmd = "jps | grep %s | wc -l" % pid
 
-            results = self.ssh.exec_on_host(host, (cmd, ))
+            results = self.ssh.exec_on_host(host, (cmd,))
 
             node_alive = '1' in results[host][0]
 
@@ -955,13 +943,10 @@ class Ignite(IgniteComponents, App):
             'status': NodeStatus.NEW,
             'template_variables': {
                 'consistent_id': self.get_node_consistent_id(node_idx)
-            }
+            },
+            'jvm_options': self.get_node_default_jvm_options(node_idx),
         }
-        self.nodes[node_idx]['jvm_options'] = []
-        if self.config['environment'].get('server_jvm_options'):
-            self.nodes[node_idx]['jvm_options'].extend(
-                self.config['environment']['server_jvm_options']
-            )
+        self.nodes[node_idx]['jvm_options'].extend(get_jvm_options(self.config['environment'], 'server_jvm_options'))
 
     def _delete_server_node(self, node_index):
         if not self.is_client_node(node_index):
@@ -1098,7 +1083,14 @@ class Ignite(IgniteComponents, App):
         self.nodes = tmp_nodes
 
     def get_jvm_options(self, node_idx):
-        return self.nodes[node_idx].get('jvm_options', [])
+        """
+        return a (reference to) list of given node JVM options
+        :param node_idx:
+        :return:
+        """
+        if 'jvm_options' not in self.nodes[node_idx]:
+            self.nodes[node_idx]['jvm_options'] = self.get_node_default_jvm_options(node_idx)
+        return self.nodes[node_idx]['jvm_options']
 
     def get_work_dir(self, node_id):
         if self.nodes.get(node_id):
@@ -1188,6 +1180,7 @@ class Ignite(IgniteComponents, App):
             force_type='int'
         )
 
+    @deprecated
     def get_jmx_port(self, host_group):
         return self.get_data_from_log(
             host_group,
@@ -1327,7 +1320,8 @@ class Ignite(IgniteComponents, App):
                             found_time_str = search(time_pattern, line_to_search)
                             if found_time_str and (found_time_str.group(1) or found_time_str.group(3)):
                                 found_time_str = found_time_str.group(1) or found_time_str.group(3)
-                                found_time = datetime.strptime(f'{format_date_now} {found_time_str}', '%Y.%m.%d %H:%M:%S')
+                                found_time = datetime.strptime(f'{format_date_now} {found_time_str}',
+                                                               '%Y.%m.%d %H:%M:%S')
                                 found_exceptions[file_name]['exceptions'][ex_idx]['time'] = found_time
                                 break
         finally:
@@ -1549,7 +1543,8 @@ class Ignite(IgniteComponents, App):
                         self.config['rt']['remote']['test_module_dir'],
                         tag,
                         host,
-                        '*server*/work/db/%s/cache* *server*/work/db/%s/meta* *server*/work/binary_meta/* *server*/work/marshaller/*' % (db_folder, db_folder),
+                        '*server*/work/db/%s/cache* *server*/work/db/%s/meta* *server*/work/binary_meta/* *server*/work/marshaller/*' % (
+                        db_folder, db_folder),
                     ),
                     'mv %s/ignite_lfs_%s.%s.tar %s' % (
                         self.config['rt']['remote']['test_module_dir'],
