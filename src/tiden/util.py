@@ -1368,6 +1368,15 @@ def kill_stalled_java(ssh):
 
 
 def get_jvm_options(dictionary, key):
+    """
+    returns a list (of JVM options) from dictionary by given key
+
+    if a key value is actually a string - splits it by ' ' and return as list anyway.
+    if a key is not present in dictionary, returns empty list
+    :param dictionary:
+    :param key:
+    :return: list
+    """
     config_jvm_options = []
     if dictionary.get(key):
         if type(dictionary[key]) == type(str):

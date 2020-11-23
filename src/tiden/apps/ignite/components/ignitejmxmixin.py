@@ -18,6 +18,8 @@ from .ignitelogdatamixin import IgniteLogDataMixin
 
 
 class IgniteJmxMixin(IgniteLogDataMixin):
+    grid_jmx_index = 0
+
     """
     Provides access to Jmx utility on demand.
 
@@ -34,6 +36,9 @@ class IgniteJmxMixin(IgniteLogDataMixin):
         # print('IgniteJmxMixin.__init__')
         super(IgniteJmxMixin, self).__init__(*args, **kwargs)
 
+        self.grid_jmx_offset = IgniteJmxMixin.grid_jmx_index
+        IgniteJmxMixin.grid_jmx_index = IgniteJmxMixin.grid_jmx_index + 1
+
         self.add_node_data_log_parsing_mask(
             name='JMX',
             node_data_key='jmx_port',
@@ -47,3 +52,31 @@ class IgniteJmxMixin(IgniteLogDataMixin):
 
     jmx = property(get_jmx_utility, None)
 
+    def _get_node_jmx_options(self, node_idx):
+        node_jmx_port = self._get_node_jmx_port(node_idx)
+        if not node_jmx_port:
+            return []
+        return [
+            '-Dcom.sun.management.jmxremote',
+            '-Dcom.sun.management.jmxremote.port=' + str(node_jmx_port),
+            '-Dcom.sun.management.jmxremote.ssl=false',
+            '-Dcom.sun.management.jmxremote.authenticate=false',
+        ]
+
+    def _get_base_jmx_port(self):
+        return 1100 + self.MAX_NODES_PER_HOST * 4 * self.grid_jmx_offset
+
+    def _get_node_jmx_port(self, node_idx):
+        if self.is_default_node(node_idx):
+            return int(node_idx + self._get_base_jmx_port() - 1)
+        elif self.is_additional_node(node_idx):
+            return int(node_idx + self._get_base_jmx_port() - 1 -
+                       self.ADDITIONAL_NODE_START_ID + (self.MAX_NODES_PER_HOST / 4))
+        elif self.is_client_node(node_idx):
+            return int(node_idx + self._get_base_jmx_port() - 1 -
+                       self.CLIENT_NODE_START_ID + 2 * (self.MAX_NODES_PER_HOST / 4))
+        elif self.is_common_node(node_idx):
+            return int(node_idx + self._get_base_jmx_port() - 1 -
+                       self.COMMON_NODE_START_ID + 3 * (self.MAX_NODES_PER_HOST / 4))
+        else:
+            return 0

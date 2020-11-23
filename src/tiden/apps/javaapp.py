@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tiden import log_print, TidenException
+from tiden import log_print, TidenException, get_jvm_options
 from tiden.apps import App, NodeStatus
 
 
@@ -162,9 +162,9 @@ class JavaApp(App):
 
     def get_env_jvm_options(self, mode='client'):
         if self.app_type in self.config['environment']:
-            return self.config['environment'][self.app_type].get(f'{mode}_jvm_options', [])
+            return get_jvm_options(self.config['environment'][self.app_type], f'{mode}_jvm_options')
         else:
-            return self.config['environment'].get(f'{mode}_jvm_options', [])
+            return get_jvm_options(self.config['environment'], f'{mode}_jvm_options')
 
     def get_node_jvm_options(self, node_idx):
         return ' '.join(self.jvm_options)

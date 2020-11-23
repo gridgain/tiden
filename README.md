@@ -288,7 +288,7 @@ Example:
     * `unique_node_ports: True|False`
     Defaults to False, unless `connection_mode` is local, True otherwise.
     If `unique_node_ports` is True, grid config files are patched to tie each node' `TcpCommunicationSpi` to
-    specfic port number unique for all grid nodes (e.g. there would be no node with equal 
+    specific port number unique for all grid nodes (e.g. there would be no node with equal 
     `TcpCommunicationSpi.port` property in the grid).
 
 * `environment.client_jvm_options: <list>` 
