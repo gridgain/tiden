@@ -47,7 +47,7 @@ class Ignite(IgniteComponents, App):
     client_host_index = 0
 
     # for unique_node_ports
-    MAX_NODES_PER_HOST = 16
+    MAX_NODES_PER_HOST = 64
 
     _setup = False
 
@@ -291,7 +291,7 @@ class Ignite(IgniteComponents, App):
         elif self.is_additional_node(node_idx):
             return \
                 int(node_idx) + \
-                self.get_base_communication_port() - 1 - self.ADDITIONAL_NODE_START_ID + self.MAX_NODES_PER_HOST / 4
+                self.get_base_communication_port() - 1 - self.ADDITIONAL_NODE_START_ID + self.MAX_NODES_PER_HOST // 4
         elif self.is_client_node(node_idx):
             return \
                 int(node_idx) + \
