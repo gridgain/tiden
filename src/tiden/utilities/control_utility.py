@@ -13,10 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from os.path import basename
 from re import search, sub
 from time import sleep
+from uuid import uuid4
 
 from ..apps.ignite.igniteexception import IgniteException
 from ..report.steps import step
@@ -114,12 +114,32 @@ class ControlUtility(BaseUtility):
             raise TidenException('Not found running server nodes')
 
         nohup = ''
+
+        # log any control utility command
+        background = ''
         if kwargs.get('background'):
-            log_print("In background mode")
-            bg = f'> {kwargs["log"]} 2>&1 &'
-            nohup = 'nohup'
-        elif kwargs.get('log'):
-            bg = f">> {kwargs['log']} 2>&1"
+            background = '&'
+        if isinstance(kwargs.get('log'), str):
+            log_path = kwargs['log']
+        elif isinstance(kwargs.get('log'), bool) and not kwargs['log']:
+            log_path = None
+        else:
+            test_dir = self.ignite.config['rt']['remote']['test_dir']
+            first_command = sub(r'\W+', '', args[0])
+            file_name = None
+            for i in range(1, 10000):
+                file_name = f'control.{self.ignite.grid_name}.{first_command}.{i}.log'
+                ls_out = self.ssh.exec_on_host(server_host, [f'ls {test_dir}'])[server_host]
+                if [file for file in ls_out[0].split('\n') if file_name == file]:
+                    file_name = None
+                else:
+                    break
+            if file_name is None:
+                file_name = f'control.{self.ignite.name}.{first_command}.{str(uuid4())[:6]}.log'
+            log_path = f'{test_dir}/{file_name}'
+
+        if log_path:
+            bg = f'> {log_path} 2>&1 {background}'
 
         if self.authentication_enabled:
             if self.auth_login:
@@ -142,11 +162,11 @@ class ControlUtility(BaseUtility):
 
         results = self.ssh.exec(commands, **ssh_options)
 
-        if kwargs.get('log'):
+        if log_path is not None and not background:
             limit = ''
             if kwargs.get('output_limit'):
                 limit = f' | tail -n {kwargs["output_limit"]}'
-            lines = self.ssh.exec_on_host(client_host, [f'cat {kwargs["log"]}{limit}'])[client_host][0]
+            lines = self.ssh.exec_on_host(client_host, [f'cat {log_path}{limit}'])[client_host][0]
         else:
             lines = results[client_host][0]
 
