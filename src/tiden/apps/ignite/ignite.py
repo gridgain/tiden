@@ -291,17 +291,17 @@ class Ignite(IgniteComponents, App):
         elif self.is_additional_node(node_idx):
             return \
                 int(node_idx) + \
-                self.get_base_communication_port() - 1 - self.ADDITIONAL_NODE_START_ID + self.MAX_NODES_PER_HOST / 4
+                self.get_base_communication_port() - 1 - self.ADDITIONAL_NODE_START_ID + self.MAX_NODES_PER_HOST // 4
         elif self.is_client_node(node_idx):
             return \
                 int(node_idx) + \
                 self.get_base_communication_port() - 1 - self.CLIENT_NODE_START_ID + 2 * (
-                        self.MAX_NODES_PER_HOST / 4)
+                        self.MAX_NODES_PER_HOST // 4)
         elif self.is_common_node(node_idx):
             return \
                 int(node_idx) + \
                 self.get_base_communication_port() - 1 - self.COMMON_NODE_START_ID + 3 * (
-                        self.MAX_NODES_PER_HOST / 4)
+                        self.MAX_NODES_PER_HOST // 4)
         else:
             return 0
 
