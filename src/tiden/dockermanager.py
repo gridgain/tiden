@@ -239,8 +239,9 @@ class DockerManager:
         if build_args:
             for k, v in build_args.items():
                 params += f' --build-arg "{k}={v}"'
-        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 > {self.config['rt']['remote']['test_dir']}/build_{name}.log"
-        return self.ssh.exec_on_host(host, [cmd])
+        cmd = f"docker build -t {name} --no-cache {params} {build_directory} 2>&1 > {self.config['rt']['remote']['test_dir']}/build_{name}.log"
+        res = self.ssh.exec_on_host(host, [cmd])
+        return res
 
     def list_images(self, host=None):
         images = {}
