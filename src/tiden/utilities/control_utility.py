@@ -259,6 +259,9 @@ class ControlUtility(BaseUtility):
                     break
             if not found:
                 log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='debug')
+        if self.ignite_version_num >= version_num('8.7.33'):
+            commands['activate'] = {'attr': '--set-state ACTIVE --force --yes', 'force': ''}
+            commands['deactivate'] = {'attr': '--set-state INACTIVE --force --yes', 'force': ''}
         return commands
 
     def __parse_help(self, output):
