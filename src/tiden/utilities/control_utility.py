@@ -260,8 +260,8 @@ class ControlUtility(BaseUtility):
             if not found:
                 log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='debug')
         if self.ignite_version_num >= version_num('8.7.33'):
-            commands['activate'] = {'attr': '--set-state ACTIVE --force --yes', 'force': ''}
-            commands['deactivate'] = {'attr': '--set-state INACTIVE --force --yes', 'force': ''}
+            commands['activate'] = {'attr': 'set-state ACTIVE --force --yes', 'force': ''}
+            commands['deactivate'] = {'attr': 'set-state INACTIVE --force --yes', 'force': ''}
         return commands
 
     def __parse_help(self, output):
@@ -350,7 +350,7 @@ class ControlUtility(BaseUtility):
         if self.ignite_version is None:
             from tiden.testconfig import test_config
             self.ignite_version = test_config.get_ignite_version(self.ignite.name)
-            self.ignite_version_num = version_num(self.ignite_version)
+            self.ignite_version_num = version_num(self.ignite_version.value)
         return self.ignite_version
 
     def __update_commands(self):
@@ -370,10 +370,7 @@ class ControlUtility(BaseUtility):
 
     # TODO reuse control_utility
     def __activate(self, cmd, **kwargs):
-        if self.ignite_version_num >= version_num('8.7.33'):
-            command = 'set-state ACTIVE --force --yes' if cmd else 'set-state INACTIVE --force --yes'
-        else:
-            command = 'activate' if cmd else 'deactivate'
+        command = 'activate' if cmd else 'deactivate'
 
         log_print("%s grid" % (command[0:1].upper() + command[1:]))
 
@@ -382,6 +379,7 @@ class ControlUtility(BaseUtility):
         server_nodes_num = 0
 
         force_attr = self.get_force_attr(command)
+        command = self.commands[command]['attr']
 
         auth_attr = ''
         if self.authentication_enabled:
@@ -410,15 +408,18 @@ class ControlUtility(BaseUtility):
             host = self.ignite.nodes[node_idx]['host']
             bin_rest_port = self.ignite.nodes[node_idx]['binary_rest_port']
             ignite_home = self.ignite.nodes[node_idx]['ignite_home']
-            activate_log = self.ignite.nodes[node_idx]['log'].replace('.log', '.%s.log' % command)
+            activate_log = self.ignite.nodes[node_idx]['log'].replace(
+                '.log',
+                '.{}.log'.format(sub("\W+|--", "-", command).lower())
+            )
             if kwargs.get('log'):
                 activate_log = kwargs['log']
             if activate_commands.get(host) is None:
                 activate_commands[host] = []
                 check_commands[host] = []
             activate_commands[host].append(
-                "cd %s; bin/control.sh --host %s --port %s %s --%s %s > %s 2>&1" % (
-                    ignite_home, host, bin_rest_port, auth_attr, command, force_attr, activate_log)
+                f"cd {ignite_home}; bin/control.sh --host {host} --port {bin_rest_port} "
+                f"{auth_attr} --{command} {force_attr} > {activate_log} 2>&1"
             )
             if cmd:
                 check_commands[host].append(
