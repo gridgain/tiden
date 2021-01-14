@@ -370,10 +370,10 @@ class ControlUtility(BaseUtility):
 
     # TODO reuse control_utility
     def __activate(self, cmd, **kwargs):
-        if cmd:
-            command = 'activate'
+        if self.ignite_version_num >= version_num('8.7.33'):
+            command = 'set-state ACTIVE --force --yes' if cmd else 'set-state INACTIVE --force --yes'
         else:
-            command = 'deactivate'
+            command = 'activate' if cmd else 'deactivate'
 
         log_print("%s grid" % (command[0:1].upper() + command[1:]))
 
