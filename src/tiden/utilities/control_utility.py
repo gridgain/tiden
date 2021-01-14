@@ -259,9 +259,10 @@ class ControlUtility(BaseUtility):
                     break
             if not found:
                 log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='debug')
-        if self.ignite_version_num >= version_num('8.7.33'):
-            commands['activate'] = {'attr': 'set-state ACTIVE --force --yes', 'force': ''}
-            commands['deactivate'] = {'attr': 'set-state INACTIVE --force --yes', 'force': ''}
+        change_state = parsed_help.get('change cluster state')
+        if change_state:
+            commands['activate'] = {'attr': f'{change_state["attr"]} ACTIVE --force --yes', 'force': ''}
+            commands['deactivate'] = {'attr': f'{change_state["attr"]} INACTIVE --force --yes', 'force': ''}
         return commands
 
     def __parse_help(self, output):
@@ -370,16 +371,16 @@ class ControlUtility(BaseUtility):
 
     # TODO reuse control_utility
     def __activate(self, cmd, **kwargs):
-        command = 'activate' if cmd else 'deactivate'
+        command_name = 'activate' if cmd else 'deactivate'
 
-        log_print("%s grid" % (command[0:1].upper() + command[1:]))
+        log_print(f"{command_name.capitalize()} grid")
 
         activate_commands = {}
         check_commands = {}
         server_nodes_num = 0
 
-        force_attr = self.get_force_attr(command)
-        command = self.commands[command]['attr']
+        force_attr = self.get_force_attr(command_name)
+        command = self.commands[command_name]['attr']
 
         auth_attr = ''
         if self.authentication_enabled:
@@ -402,16 +403,13 @@ class ControlUtility(BaseUtility):
                 if kwargs.get('activate_on_particular_node'):
                     raise TidenException("Trying to activate/deactivate offline node")
 
-                print_red("Unable to find port for %s node. Skipping." % node_idx)
+                print_red(f"Unable to find port for {node_idx} node. Skipping.")
                 continue
 
             host = self.ignite.nodes[node_idx]['host']
             bin_rest_port = self.ignite.nodes[node_idx]['binary_rest_port']
             ignite_home = self.ignite.nodes[node_idx]['ignite_home']
-            activate_log = self.ignite.nodes[node_idx]['log'].replace(
-                '.log',
-                '.{}.log'.format(sub("\W+|--", "-", command).lower())
-            )
+            activate_log = self.ignite.nodes[node_idx]['log'].replace('.log', f'.{command_name}.log')
             if kwargs.get('log'):
                 activate_log = kwargs['log']
             if activate_commands.get(host) is None:
@@ -419,16 +417,24 @@ class ControlUtility(BaseUtility):
                 check_commands[host] = []
             activate_commands[host].append(
                 f"cd {ignite_home}; bin/control.sh --host {host} --port {bin_rest_port} "
-                f"{auth_attr} --{command} {force_attr} > {activate_log} 2>&1"
+                f"{auth_attr} {command} {force_attr} > {activate_log} 2>&1"
             )
             if cmd:
                 check_commands[host].append(
-                    'cat %s | grep "\(Success final activate\|Successfully performed final activation steps\|Successfully activated caches\)"'
-                    % self.ignite.nodes[node_idx]['log']
+                    f'cat {self.ignite.nodes[node_idx]["log"]} | '
+                    f'grep "\('
+                    f'Success final activate\|'
+                    f'Successfully performed final activation steps\|'
+                    f'Successfully activated caches\
+                    )"'
                 )
             else:
                 check_commands[host].append(
-                    'cat %s | grep "\(Success final deactivate\|Successfully deactivated caches\|Successfully deactivated datastructures, services and caches\)"'
+                    'cat %s | grep "\('
+                    'Success final deactivate\|'
+                    'Successfully deactivated caches\|'
+                    'Successfully deactivated datastructures, services and caches'
+                    '\)"'
                     % self.ignite.nodes[node_idx]['log']
                 )
             server_nodes_num += 1
