@@ -166,7 +166,7 @@ def test_runner_basic(with_dec_classpath, local_config, tmpdir, mock_pm):
             {'status': 'fail', 'type': 'TidenException', 'message': 'TidenException(\'Fake exception in test\')'},
         'test_should_be_skipped':
             {'status': 'skipped',
-             'type': 'skipped cause of expression evaluates to False at %s:45' % test_module_source_file_name,
+             'type': f'skipped cause of expression evaluates to False at {test_module_source_file_name}:46',
              'message': None},
         'test_should_be_not_started':
             {'status': 'skipped_no_start',
