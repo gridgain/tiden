@@ -163,7 +163,7 @@ commands_2_5_8_and_higher_with_yes = {
 
 commands_2_9_0_and_higher = {
     'activate': '',
-    'deactivate': '--yes',
+    'deactivate': '',
     'state': '',
     'set_state': '--yes',
     'baseline_print': '',
@@ -291,7 +291,8 @@ def test_parse_help(data):
 
         for command_help in parsed_help.keys():
             command = cu._ControlUtility__parse_commands({command_help: parsed_help[command_help]})
-            assert len(command) == 1, "Command understood"
+            expected_parsed_commands_count = 3 if command_help == 'change cluster state' else 1
+            assert len(command) == expected_parsed_commands_count, "Command understood"
             assert data['help'][command_help] in command.keys(), "Command parsed ok"
 
         commands = cu._ControlUtility__parse_commands(parsed_help)
