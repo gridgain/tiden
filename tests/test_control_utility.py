@@ -292,10 +292,7 @@ def test_parse_help(data):
         for command_help in parsed_help.keys():
             command = cu._ControlUtility__parse_commands({command_help: parsed_help[command_help]})
             expected_parsed_commands_count = 3 if command_help == 'change cluster state' else 1
-            try:
-                assert len(command) == expected_parsed_commands_count, "Command understood"
-            except:
-                print()
+            assert len(command) == expected_parsed_commands_count, "Command understood"
             assert data['help'][command_help] in command.keys(), "Command parsed ok"
 
         commands = cu._ControlUtility__parse_commands(parsed_help)
