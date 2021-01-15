@@ -102,8 +102,8 @@ def test_runner_collect(with_dec_classpath, local_config, tmpdir, mock_pm):
     res.update_xunit()
     res.create_testrail_report(config, report_file=basename(testrail_report_file_collect))
     _tests = res.get_tests()
-    assert 12 == len(_tests)
     print(_tests)
+    assert 12 == len(_tests)
 
     TidenFabric().reset().setConfig(config)
     tr = TidenRunner(config, modules=modules, ssh_pool=ssh_pool, plugin_manager=mock_pm, xunit_path=xunit_file_process)
@@ -111,8 +111,8 @@ def test_runner_collect(with_dec_classpath, local_config, tmpdir, mock_pm):
     res = tr.get_tests_results()
     res.create_testrail_report(config, report_file=basename(testrail_report_file_process))
     _tests = res.get_tests()
-    assert 2 == len(_tests)
     print(_tests)
+    assert 2 == len(_tests)
 
 
 def test_runner_basic(with_dec_classpath, local_config, tmpdir, mock_pm):
