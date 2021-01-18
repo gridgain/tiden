@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import OrderedDict
 from os.path import basename
 from re import search, sub
 from time import sleep
@@ -227,6 +228,9 @@ class ControlUtility(BaseUtility):
         known_patterns = {
             'deactivate': 'deactivate',
             'activate': 'activate',
+            'change cluster state active param': 'set_state_activate',
+            'change cluster state inactive param': 'set_state_inactivate',
+            'change cluster state active_read_only param': 'set_state_read_only',
             'add nodes': 'baseline_add',
             'remove nodes': 'baseline_remove',
             'based on version': 'baseline_version',
@@ -260,9 +264,6 @@ class ControlUtility(BaseUtility):
             if not found:
                 log_print('WARN: Unknown command in control.sh help: %s' % help_string, 2, color='debug')
         change_state = parsed_help.get('change cluster state')
-        if change_state:
-            commands['activate'] = {'attr': f'{change_state["attr"]} ACTIVE --force --yes', 'force': ''}
-            commands['deactivate'] = {'attr': f'{change_state["attr"]} INACTIVE --force --yes', 'force': ''}
         return commands
 
     def __parse_help(self, output):
@@ -307,7 +308,22 @@ class ControlUtility(BaseUtility):
                         if force_attr_check(control_attrs[-1]):
                             force_attr = control_attrs[-1].replace("[", "").replace("]", "")
                             break
-                help[action_name] = {'attr': attr, 'force': force_attr}
+
+                parameters = []
+                found_parameters = [ca.split('|') for ca in control_attrs if search('^([a-zA-Z_]+\|[a-zA-Z_]+){2,}$', ca) and not search('\[|\]', ca)]
+                if found_parameters:
+                    parameters = found_parameters[0]
+
+                all_force_attrs = ''
+                if action_name == 'change cluster state':
+                    all_force_attrs = ' '.join([sub("[\[\]]", "", ca) for ca in control_attrs if search("^\[--\w+\]$", ca)])
+                    force_attr = ''
+
+                if parameters:
+                    for parameter in parameters:
+                        help[f'{action_name} {parameter.lower()} param'] = {'attr': f'{attr} {parameter} {all_force_attrs}', 'force': force_attr}
+                else:
+                    help[action_name] = {'attr': attr, 'force': force_attr}
                 if 'transaction' in action_name:
                     for idx, control_attr in enumerate(control_attrs):
                         control_attr = control_attr.lower().replace('[', '').replace(']', '').replace('|', ' ')
@@ -371,7 +387,11 @@ class ControlUtility(BaseUtility):
 
     # TODO reuse control_utility
     def __activate(self, cmd, **kwargs):
-        command_name = 'activate' if cmd else 'deactivate'
+        self.__update_commands()
+        if self.commands.get('set_state_activate'):
+            command_name = 'set_state_activate' if cmd else 'set_state_inactivate'
+        else:
+            command_name = 'activate' if cmd else 'deactivate'
 
         log_print(f"{command_name.capitalize()} grid")
 
@@ -385,9 +405,9 @@ class ControlUtility(BaseUtility):
         auth_attr = ''
         if self.authentication_enabled:
             if self.auth_login:
-                auth_attr += ' --user %s ' % self.auth_login
+                auth_attr += f' --user {self.auth_login} '
             if self.auth_password:
-                auth_attr += ' --password %s ' % self.auth_password
+                auth_attr += f' --password {self.auth_password} '
 
         if self.ssl_connection_enabled:
             auth_attr += self.__return_ssl_connection_string()
