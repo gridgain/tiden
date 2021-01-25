@@ -309,18 +309,14 @@ class ControlUtility(BaseUtility):
                             force_attr = control_attrs[-1].replace("[", "").replace("]", "")
                             break
 
-                parameters = []
-                found_parameters = [ca.split('|') for ca in control_attrs if search('^([a-zA-Z_]+\|[a-zA-Z_]+){2,}$', ca) and not search('\[|\]', ca)]
-                if found_parameters:
-                    parameters = found_parameters[0]
-
                 all_force_attrs = ''
                 if action_name == 'change cluster state':
                     all_force_attrs = ' '.join([sub("[\[\]]", "", ca) for ca in control_attrs if search("^\[--\w+\]$", ca)])
                     force_attr = ''
 
-                if parameters:
-                    for parameter in parameters:
+                found_parameters = [ca.split('|') for ca in control_attrs if search('^([a-zA-Z_]+\|[a-zA-Z_]+){2,}$', ca) and not search('\[|\]', ca)]
+                if found_parameters:
+                    for parameter in found_parameters[0]:
                         help[f'{action_name} {parameter.lower()} param'] = {'attr': f'{attr} {parameter} {all_force_attrs}', 'force': force_attr}
                 else:
                     help[action_name] = {'attr': attr, 'force': force_attr}
@@ -851,5 +847,4 @@ class ControlUtility(BaseUtility):
     def __print_utility_output(self, output):
         for line in output.split('\n'):
             log_print(line)
-
 
