@@ -228,9 +228,9 @@ class ControlUtility(BaseUtility):
         known_patterns = {
             'deactivate': 'deactivate',
             'activate': 'activate',
-            'change cluster state active param': 'set_state_activate',
-            'change cluster state inactive param': 'set_state_inactivate',
-            'change cluster state active_read_only param': 'set_state_read_only',
+            'change cluster state active param': 'set_state_active',
+            'change cluster state inactive param': 'set_state_inactive',
+            'change cluster state active_read_only param': 'set_state_active_read_only',
             'add nodes': 'baseline_add',
             'remove nodes': 'baseline_remove',
             'based on version': 'baseline_version',
@@ -384,8 +384,8 @@ class ControlUtility(BaseUtility):
     # TODO reuse control_utility
     def __activate(self, cmd, **kwargs):
         self.__update_commands()
-        if self.commands.get('set_state_activate'):
-            command_name = 'set_state_activate' if cmd else 'set_state_inactivate'
+        if self.commands.get('set_state_active'):
+            command_name = 'set_state_active' if cmd else 'set_state_inactive'
         else:
             command_name = 'activate' if cmd else 'deactivate'
 
