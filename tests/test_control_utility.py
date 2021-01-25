@@ -93,7 +93,9 @@ help_2_5_8_and_higher = {
 help_2_9_0_and_higher = {
     'activate cluster (deprecated. use --set-state instead)': 'activate',
     'deactivate cluster (deprecated. use --set-state instead)': 'deactivate',
-    'change cluster state': 'set_state',
+    'change cluster state inactive param': 'set_state_inactive',
+    'change cluster state active param': 'set_state_active',
+    'change cluster state active_read_only param': 'set_state_active_read_only',
     'change the master key': 'change_master_key',
     'print the current master key name': 'print_master_key',
     'kill service by name': 'kill_service',
@@ -163,9 +165,11 @@ commands_2_5_8_and_higher_with_yes = {
 
 commands_2_9_0_and_higher = {
     'activate': '',
-    'deactivate': '',
+    'deactivate': '--yes',
     'state': '',
-    'set_state': '--yes',
+    'set_state_active': '',
+    'set_state_inactive': '',
+    'set_state_active_read_only': '',
     'baseline_print': '',
     'baseline_add': '--yes',
     'baseline_remove': '--yes',
@@ -291,8 +295,7 @@ def test_parse_help(data):
 
         for command_help in parsed_help.keys():
             command = cu._ControlUtility__parse_commands({command_help: parsed_help[command_help]})
-            expected_parsed_commands_count = 3 if command_help == 'change cluster state' else 1
-            assert len(command) == expected_parsed_commands_count, "Command understood"
+            assert len(command) == 1, "Command understood"
             assert data['help'][command_help] in command.keys(), "Command parsed ok"
 
         commands = cu._ControlUtility__parse_commands(parsed_help)
