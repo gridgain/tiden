@@ -438,19 +438,19 @@ class ControlUtility(BaseUtility):
             if cmd:
                 check_commands[host].append(
                     f'cat {self.ignite.nodes[node_idx]["log"]} | '
-                    f'grep "\('
-                    f'Success final activate\|'
-                    f'Successfully performed final activation steps\|'
-                    f'Successfully activated caches\
-                    )"'
+                    f'grep -E "('
+                    f'Success final activate|'
+                    f'Successfully performed final activation steps|'
+                    f'Successfully activated caches'
+                    ')"'
                 )
             else:
                 check_commands[host].append(
-                    'cat %s | grep "\('
-                    'Success final deactivate\|'
-                    'Successfully deactivated caches\|'
+                    'cat %s | grep -E "('
+                    'Success final deactivate|'
+                    'Successfully deactivated caches|'
                     'Successfully deactivated datastructures, services and caches'
-                    '\)"'
+                    ')"'
                     % self.ignite.nodes[node_idx]['log']
                 )
             server_nodes_num += 1
