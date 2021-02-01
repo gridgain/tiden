@@ -597,7 +597,7 @@ class TidenRunner:
                         start_line = line_idx
                 test_log_path = join(self.config['tmp_dir'], f'{test_method_name}.log')
                 with open(test_log_path, 'w') as f:
-                    f.write('\n'.join(lines[start_line:]))
+                    f.write(''.join(lines[start_line:]))
                 add_attachment(self, 'tiden.log', test_log_path, AttachmentType.FILE)
                 remove(test_log_path)
             except:
