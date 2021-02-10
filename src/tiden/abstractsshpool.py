@@ -53,7 +53,7 @@ class AbstractSshPool:
     def dirsize(self, dir_path, *args):
         raise NotImplementedError
 
-    def upload(self, files, remote_path):
+    def upload(self, files, remote_path, **kwargs):
         raise NotImplementedError
 
     def not_uploaded(self, files, remote_path):

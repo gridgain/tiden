@@ -14,19 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import socket
 from hashlib import md5
 from multiprocessing.dummy import Pool as ThreadPool
+from os import path
+from os.path import basename
+from re import search, split
 from time import sleep
 
 from paramiko import AutoAddPolicy, SSHClient, SSHException, SFTPClient
 from paramiko.buffered_pipe import PipeTimeout
-import socket
-from re import search, split
 
 from .abstractsshpool import AbstractSshPool
-from .util import log_print, log_put, log_add, get_logger
-from os import path
 from .tidenexception import RemoteOperationTimeout, TidenException
+from .util import log_print, log_put, log_add, get_logger
 
 debug_ssh_pool = False
 
@@ -410,39 +411,59 @@ class SshPool(AbstractSshPool):
                     cur_size += int(m.group(1))
         return cur_size
 
-    def upload(self, files, remote_path):
-        files_for_hosts = []
-        for host in self.hosts:
-            files_for_hosts.append(
-                [host, files, remote_path]
-            )
-        pool = ThreadPool(self.threads_num)
-        pool.starmap(self.upload_on_host, files_for_hosts)
-        pool.close()
-        pool.join()
+    def upload(self, files, remote_path, **kwargs):
+        self.upload_for_hosts(self.hosts, files, remote_path, inner_download=kwargs.get('inner_download'))
 
-    def upload_for_hosts(self, hosts, files, remote_path):
+    def upload_for_hosts(self, hosts, files, remote_path, inner_download=False):
         files_for_hosts = []
-        for host in hosts:
-            files_for_hosts.append(
-                [host, files, remote_path]
-            )
-        pool = ThreadPool(self.threads_num)
-        pool.starmap(self.upload_on_host, files_for_hosts)
-        pool.close()
-        pool.join()
+        if inner_download:
+            first_found_host = hosts[0]
+            other_hosts = hosts[1:]
+            self.upload_on_host(first_found_host, files, remote_path)
+            tmp_dir = self.home
+            key_path = f'{tmp_dir}/{basename(self.private_key_path)}'
+            self.upload_for_hosts(other_hosts, [self.private_key_path], tmp_dir)
+            try:
+                download_commands = {}
+                for other_host in other_hosts:
+                    download_commands[other_host] = [f'chmod 600 {key_path}']
+                    for file in files:
+                        download_commands[other_host].append(
+                            f'rsync -Pav -e '
+                            f'"ssh -i {key_path}" '
+                            f'{self.username}@{first_found_host}:{remote_path}/{basename(file)} '
+                            f'{remote_path}/'
+                        )
+                failed_to_download = []
+                for host, res in self.exec(download_commands).items():
+                    for idx, output in enumerate(res[1:]):
+                        if 'total size' not in output:
+                            failed_to_download.append(f'Failed to download {first_found_host}->{host}:{files[idx]}')
+                if failed_to_download:
+                    raise TidenException("Failed to download artifacts inside network\n{}".format('\n'.join(failed_to_download)))
+            finally:
+                self.exec(dict([(host, [f'rm {key_path}']) for host in other_hosts]))
+        else:
+            for host in hosts:
+                files_for_hosts.append(
+                    [host, files, remote_path]
+                )
+            pool = ThreadPool(self.threads_num)
+            pool.starmap(self.upload_on_host, files_for_hosts)
+            pool.close()
+            pool.join()
 
     def not_uploaded(self, files, remote_path):
         outdated = []
         for file in files:
             file_name = path.basename(file)
             local_md5 = md5(open(file, 'rb').read()).hexdigest()
-            remote_file = "%s/%s" % (remote_path, file_name)
-            results = self.exec(['md5sum %s' % remote_file])
+            remote_file = f"{remote_path}/{file_name}"
+            results = self.exec([f'md5sum {remote_file}'])
             matched_count = 0
             for host in results.keys():
                 if len(results[host]) > 0:
-                    if '%s ' % local_md5 in results[host][0]:
+                    if f'{local_md5} ' in results[host][0]:
                         matched_count += 1
             if matched_count < len(results.keys()):
                 outdated.append(file)
@@ -452,8 +473,8 @@ class SshPool(AbstractSshPool):
         try:
             sftp = self.clients.get(host).open_sftp()
             for local_file in files:
-                remote_path = remote_dir + '/' + path.basename(local_file)
-                get_logger('ssh_pool').debug('sftp_put on host %s: %s -> %s' % (host, local_file, remote_path))
+                remote_path = f'{remote_dir}/{path.basename(local_file)}'
+                get_logger('ssh_pool').debug(f'sftp_put on host {host}: {local_file} -> {remote_path}')
                 sftp.put(local_file, remote_path)
         except SSHException as e:
             print(str(e))
@@ -504,4 +525,3 @@ class SshPool(AbstractSshPool):
         res = self.exec(kill_command)
         # print_blue(res)
         return res
-
