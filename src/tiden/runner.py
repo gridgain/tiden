@@ -297,7 +297,7 @@ def upload_artifacts(ssh_pool, config, remote_unzip_files):
     files = ssh_pool.not_uploaded(glob(f"{config['artifacts_dir']}/*"), remote_artifacts)
     if len(files) > 0:
         log_print(f'Final file list for upload: {", ".join(files)}')
-        ssh_pool.upload(files, remote_artifacts, inner_download=bool(config.get('init_inner_upload')))
+        ssh_pool.upload(files, remote_artifacts, internal_download=bool(config.get('init_internal_upload')))
     else:
         log_print('Nothing found for upload')
 
