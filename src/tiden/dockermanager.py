@@ -89,7 +89,7 @@ class DockerManager:
             res = self.ssh.exec_on_host(host, cmd)
         else:
             res = self.ssh.exec(cmd)
-        running_containers = {}
+        containers = {}
         for host, out in res.items():
             rows = out[0].split("\n")[:-1]
             for row in rows:
@@ -102,8 +102,8 @@ class DockerManager:
                         'name': info_list[3],
                         'port': info_list[4]
                     }
-                    running_containers[host] = running_containers.get(host, []) + [info]
-        return running_containers
+                    containers[host] = containers.get(host, []) + [info]
+        return containers
 
     def get_all_containers(self, host=None):
         containers = self.get_containers_info(additional_key='-f "status=exited"')
@@ -120,7 +120,7 @@ class DockerManager:
             if running_containers:
                 all_running_containers[current_host] = running_containers
 
-        return all_running_containers if not host else all_running_containers.get(host)
+        return all_running_containers if not host else all_running_containers.get(host, [])
 
     def remove_containers(self, host=None, name=None, name_pattern=None, image_name=None, hosts_containers=None):
         """
@@ -233,14 +233,18 @@ class DockerManager:
         :param build_args:          build args
         :return:                    build output
         """
+        log_put(f'build image {name} on {host}')
         params = ''
         if dockerfile_path:
             params += f" -f {dockerfile_path}"
         if build_args:
             for k, v in build_args.items():
                 params += f' --build-arg "{k}={v}"'
-        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 > {self.config['rt']['remote']['test_dir']}/build_{name}.log"
-        return self.ssh.exec_on_host(host, [cmd])
+        log_path = f"{self.config['rt']['remote']['test_dir']}/build_{name}.log"
+        cmd = f"docker build -t {name} {params} {build_directory} 2>&1 > {log_path}"
+        self.ssh.exec_on_host(host, [cmd])
+        out = self.ssh.exec_on_host(host, [f'cat {log_path}'])
+        return out[host]
 
     def list_images(self, host=None):
         images = {}
@@ -442,8 +446,7 @@ class DockerManager:
         params_str = ''
         kw_params_str = ''
 
-        if tag:
-            image_name = f"{image_name}:{default(tag, 'latest')}"
+        image_name = f"{image_name}:{default(tag, 'latest')}"
         if network:
             kw_params["network"] = network
         if ports:
@@ -825,3 +828,26 @@ class DockerManager:
     def remove_all_images(self):
         for host in self.ssh.hosts:
             self.remove_images(host)
+
+    def transfer_image(self, image_name, source_host, target_hosts: list, tmp_dir=None):
+        log_put(f'transfer image {image_name} {source_host} -> {",".join(target_hosts)}')
+        if tmp_dir is None:
+            tmp_dir = self.config['rt']['remote']['test_dir']
+
+        tmp_name = sub(r"\W+", '', image_name)
+        image_path = f'{tmp_dir}/{tmp_name}.tar.gz'
+        self.ssh.exec_on_host(source_host, [f'docker save -o {image_path} {image_name}'])
+        self.ssh.transfer_file({source_host: [image_path]}, self._gd(target_hosts, tmp_dir))
+        remote_image_path = f'{tmp_dir}/{basename(image_path)}'
+        log_put(f'load images on {",".join(target_hosts)}')
+        load_res = self.ssh.exec(self._gd(target_hosts, [f'docker load -i {remote_image_path}']))
+        for host, out in load_res.items():
+            if 'Loaded image' not in out[0]:
+                raise TidenException(f'Failed to load image on {host}')
+        self.ssh.exec(self._gd(target_hosts, [f'rm {remote_image_path}']))
+
+    def _gd(self, keys, value):
+        """
+        Generate dict with same values
+        """
+        return dict([(key, value) for key in keys])
