@@ -56,7 +56,7 @@ class AnsiblePool(SshPool):
     def trace_info(self):
         log_print('Support environment through Ansible')
 
-    def upload(self, files, remote_path):
+    def upload(self, files, remote_path, **kwargs):
         results_callback = DebugCallback()
 
         tasks = []
