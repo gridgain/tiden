@@ -413,7 +413,7 @@ class SshPool(AbstractSshPool):
         return cur_size
 
     def upload(self, files, remote_path, **kwargs):
-        self.upload_for_hosts(self.hosts, files, remote_path, internal_download=kwargs.get('inner_download'))
+        self.upload_for_hosts(self.hosts, files, remote_path, internal_download=kwargs.get('internal_download'))
 
     def upload_for_hosts(self, hosts, files, remote_path, internal_download=False):
         files_for_hosts = []
