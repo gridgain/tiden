@@ -21,6 +21,7 @@ from os import path
 from os.path import basename
 from re import search, split
 from time import sleep
+from typing import Dict, List
 
 from paramiko import AutoAddPolicy, SSHClient, SSHException, SFTPClient
 from paramiko.buffered_pipe import PipeTimeout
@@ -420,29 +421,10 @@ class SshPool(AbstractSshPool):
             first_found_host = hosts[0]
             other_hosts = hosts[1:]
             self.upload_on_host(first_found_host, files, remote_path)
-            tmp_dir = self.home
-            key_path = f'{tmp_dir}/{basename(self.private_key_path)}'
-            self.upload_for_hosts(other_hosts, [self.private_key_path], tmp_dir)
-            try:
-                download_commands = {}
-                for other_host in other_hosts:
-                    download_commands[other_host] = [f'chmod 600 {key_path}']
-                    for file in files:
-                        download_commands[other_host].append(
-                            f'rsync -Pav -e '
-                            f'"ssh -i {key_path}" '
-                            f'{self.username}@{first_found_host}:{remote_path}/{basename(file)} '
-                            f'{remote_path}/'
-                        )
-                failed_to_download = []
-                for host, res in self.exec(download_commands).items():
-                    for idx, output in enumerate(res[1:]):
-                        if 'total size' not in output:
-                            failed_to_download.append(f'Failed to download {first_found_host}->{host}:{files[idx]}')
-                if failed_to_download:
-                    raise TidenException("Failed to download artifacts inside network\n{}".format('\n'.join(failed_to_download)))
-            finally:
-                self.exec(dict([(host, [f'rm {key_path}']) for host in other_hosts]))
+            self.transfer_file(
+                {first_found_host: [f'{remote_path}/{basename(file)}' for file in files]},
+                dict([(host, remote_path) for host in other_hosts])
+            )
         else:
             for host in hosts:
                 files_for_hosts.append(
@@ -452,6 +434,33 @@ class SshPool(AbstractSshPool):
             pool.starmap(self.upload_on_host, files_for_hosts)
             pool.close()
             pool.join()
+
+    def transfer_file(self, source: Dict[str, List[str]], target: Dict[str, str]):
+
+        tmp_dir = self.home
+        key_path = f'{tmp_dir}/{basename(self.private_key_path)}'
+        command = dict([(host, [f'chmod 600 {key_path}']) for host in target.keys()])
+        self.upload_for_hosts(list(target.keys()), [self.private_key_path], tmp_dir)
+        try:
+            for source_host, source_files in source.items():
+                for target_host, target_path in target.items():
+                    if not target_path.endswith('/'):
+                        target_path += '/'
+                    for source_file in source_files:
+                        command[target_host] = command[target_host] + [
+                            f'rsync -Pav -e "ssh -i {key_path}" '
+                            f'{self.username}@{source_host}:{source_file} {target_path}'
+                        ]
+            failed_to_download = []
+            download_res = self.exec(command)
+            for host, res in download_res.items():
+                for idx, output in enumerate(res[1:]):
+                    if 'total size' not in output:
+                        failed_to_download.append(f'Failed to download '
+                                                  f'{",".join([s for s in source.keys()])}->'
+                                                  f'{",".join([s for s in target.keys()])}')
+        finally:
+            self.exec(dict([(host, [f'rm {key_path}']) for host in target.keys()]))
 
     def not_uploaded(self, files, remote_path):
         outdated = []
