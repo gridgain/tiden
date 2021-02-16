@@ -436,31 +436,23 @@ class SshPool(AbstractSshPool):
             pool.join()
 
     def transfer_file(self, source: Dict[str, List[str]], target: Dict[str, str]):
-
-        tmp_dir = self.home
-        key_path = f'{tmp_dir}/{basename(self.private_key_path)}'
-        command = dict([(host, [f'chmod 600 {key_path}']) for host in target.keys()])
-        self.upload_for_hosts(list(target.keys()), [self.private_key_path], tmp_dir)
-        try:
-            for source_host, source_files in source.items():
-                for target_host, target_path in target.items():
-                    if not target_path.endswith('/'):
-                        target_path += '/'
-                    for source_file in source_files:
-                        command[target_host] = command[target_host] + [
-                            f'rsync -Pav -e "ssh -i {key_path}" '
-                            f'{self.username}@{source_host}:{source_file} {target_path}'
-                        ]
-            failed_to_download = []
-            download_res = self.exec(command)
-            for host, res in download_res.items():
-                for idx, output in enumerate(res[1:]):
-                    if 'total size' not in output:
-                        failed_to_download.append(f'Failed to download '
-                                                  f'{",".join([s for s in source.keys()])}->'
-                                                  f'{",".join([s for s in target.keys()])}')
-        finally:
-            self.exec(dict([(host, [f'rm {key_path}']) for host in target.keys()]))
+        command = {}
+        for source_host, source_files in source.items():
+            for target_host, target_path in target.items():
+                if not target_path.endswith('/'):
+                    target_path += '/'
+                for source_file in source_files:
+                    command[target_host] = command.get(target_host, []) + [
+                        f'rsync {source_host}:{source_file} {target_path}'
+                    ]
+        failed_to_download = []
+        download_res = self.exec(command)
+        for host, res in download_res.items():
+            for idx, output in enumerate(res[1:]):
+                if 'total size' not in output:
+                    failed_to_download.append(f'Failed to download '
+                                              f'{",".join([s for s in source.keys()])}->'
+                                              f'{",".join([s for s in target.keys()])}')
 
     def not_uploaded(self, files, remote_path):
         outdated = []

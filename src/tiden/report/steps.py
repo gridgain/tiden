@@ -28,13 +28,14 @@ from uuid import uuid4
 
 from requests import post
 
-from ..util import log_print
+from ..util import log_put
 
 
 def test_name(name):
     def wrap(fn):
         fn.__report_title__ = name
         return fn
+
     return wrap
 
 
@@ -42,6 +43,7 @@ def suites(suites_path: list):
     def wrap(fn):
         fn.__report_suites__ = suites_path
         return fn
+
     return wrap
 
 
@@ -63,7 +65,7 @@ class InnerReportConfig:
         step_id = None
         for step_item in deepcopy(steps):
             if step_item['status'] is None:
-                step_item['children'], step_id  = self._start_step(step_item.get('children', []), name, parameters)
+                step_item['children'], step_id = self._start_step(step_item.get('children', []), name, parameters)
             new_steps.append(step_item)
         if step_id is None:
             step_id = str(uuid4())
@@ -123,7 +125,7 @@ class InnerReportConfig:
         self.steps = self._end_step(self.steps, step_id, status, stacktrace)
 
     def _make_pretty_diff(self, start, end):
-        diff = round((end - start)/1000)
+        diff = round((end - start) / 1000)
         if diff > 60:
             minutes = diff // 60
             pretty_diff = f'{diff // 60}m {diff - minutes * 60}s'
@@ -144,7 +146,7 @@ class Step:
 
     def __enter__(self):
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
-            log_print(f'Step {self.name} started', color='debug')
+            log_put(f'Step {self.name} started', color='debug')
         _, self.unique = _change_report_storage(self.cls, lambda report: report.start_step(self.name, self.parameters))
         return self
 
@@ -154,7 +156,7 @@ class Step:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
-            log_print(f'Step {self.name} ended', color='debug')
+            log_put(f'Step {self.name} ended', color='debug')
 
         if exc_val:
             if exc_type not in self.expected_exceptions:
@@ -175,6 +177,7 @@ class Step:
 class AttachmentType(Enum):
     TEXT = 'text/plain'
     JSON = 'text/json'
+    PNG = 'image/png'
     FILE = 'file'
 
 
@@ -252,7 +255,9 @@ def step(name=None, attach_parameters=False, expected_exceptions: list = None):
                 if step_id:
                     _change_report_storage(args[0], lambda report: report.end_step(step_id, 'passed' if step_passed else 'failed', stacktrace))
             return result
+
         return _inner
+
     return inner
 
 
@@ -358,4 +363,3 @@ def get_params(base, args, kwargs, fn):
         return base.format(**format_params)
     else:
         return base
-
