@@ -196,7 +196,7 @@ class LocalPool(SshPool):
 
     # === after goes simple delegates, the only actual meaning of them is to dump debug info.
 
-    def upload(self, files, remote_path):
+    def upload(self, files, remote_path, **kwargs):
         if debug_local_pool:
             print("%s: upload(%s, %s)" % (
                 LocalPool._now(),

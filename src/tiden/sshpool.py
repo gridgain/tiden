@@ -14,19 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import socket
 from hashlib import md5
 from multiprocessing.dummy import Pool as ThreadPool
+from os import path
+from os.path import basename
+from re import search, split
 from time import sleep
+from typing import Dict, List
 
 from paramiko import AutoAddPolicy, SSHClient, SSHException, SFTPClient
 from paramiko.buffered_pipe import PipeTimeout
-import socket
-from re import search, split
 
 from .abstractsshpool import AbstractSshPool
-from .util import log_print, log_put, log_add, get_logger
-from os import path
 from .tidenexception import RemoteOperationTimeout, TidenException
+from .util import log_print, log_put, log_add, get_logger
 
 debug_ssh_pool = False
 
@@ -410,39 +412,59 @@ class SshPool(AbstractSshPool):
                     cur_size += int(m.group(1))
         return cur_size
 
-    def upload(self, files, remote_path):
-        files_for_hosts = []
-        for host in self.hosts:
-            files_for_hosts.append(
-                [host, files, remote_path]
-            )
-        pool = ThreadPool(self.threads_num)
-        pool.starmap(self.upload_on_host, files_for_hosts)
-        pool.close()
-        pool.join()
+    def upload(self, files, remote_path, **kwargs):
+        self.upload_for_hosts(self.hosts, files, remote_path, internal_download=kwargs.get('internal_download'))
 
-    def upload_for_hosts(self, hosts, files, remote_path):
+    def upload_for_hosts(self, hosts, files, remote_path, internal_download=False):
         files_for_hosts = []
-        for host in hosts:
-            files_for_hosts.append(
-                [host, files, remote_path]
+        if internal_download:
+            first_found_host = hosts[0]
+            other_hosts = hosts[1:]
+            self.upload_on_host(first_found_host, files, remote_path)
+            self.transfer_file(
+                {first_found_host: [f'{remote_path}/{basename(file)}' for file in files]},
+                dict([(host, remote_path) for host in other_hosts])
             )
-        pool = ThreadPool(self.threads_num)
-        pool.starmap(self.upload_on_host, files_for_hosts)
-        pool.close()
-        pool.join()
+        else:
+            for host in hosts:
+                files_for_hosts.append(
+                    [host, files, remote_path]
+                )
+            pool = ThreadPool(self.threads_num)
+            pool.starmap(self.upload_on_host, files_for_hosts)
+            pool.close()
+            pool.join()
+
+    def transfer_file(self, source: Dict[str, List[str]], target: Dict[str, str]):
+        command = {}
+        for source_host, source_files in source.items():
+            for target_host, target_path in target.items():
+                if not target_path.endswith('/'):
+                    target_path += '/'
+                for source_file in source_files:
+                    command[target_host] = command.get(target_host, []) + [
+                        f'rsync {source_host}:{source_file} {target_path}'
+                    ]
+        failed_to_download = []
+        download_res = self.exec(command)
+        for host, res in download_res.items():
+            for idx, output in enumerate(res[1:]):
+                if 'total size' not in output:
+                    failed_to_download.append(f'Failed to download '
+                                              f'{",".join([s for s in source.keys()])}->'
+                                              f'{",".join([s for s in target.keys()])}')
 
     def not_uploaded(self, files, remote_path):
         outdated = []
         for file in files:
             file_name = path.basename(file)
             local_md5 = md5(open(file, 'rb').read()).hexdigest()
-            remote_file = "%s/%s" % (remote_path, file_name)
-            results = self.exec(['md5sum %s' % remote_file])
+            remote_file = f"{remote_path}/{file_name}"
+            results = self.exec([f'md5sum {remote_file}'])
             matched_count = 0
             for host in results.keys():
                 if len(results[host]) > 0:
-                    if '%s ' % local_md5 in results[host][0]:
+                    if f'{local_md5} ' in results[host][0]:
                         matched_count += 1
             if matched_count < len(results.keys()):
                 outdated.append(file)
@@ -452,8 +474,8 @@ class SshPool(AbstractSshPool):
         try:
             sftp = self.clients.get(host).open_sftp()
             for local_file in files:
-                remote_path = remote_dir + '/' + path.basename(local_file)
-                get_logger('ssh_pool').debug('sftp_put on host %s: %s -> %s' % (host, local_file, remote_path))
+                remote_path = f'{remote_dir}/{path.basename(local_file)}'
+                get_logger('ssh_pool').debug(f'sftp_put on host {host}: {local_file} -> {remote_path}')
                 sftp.put(local_file, remote_path)
         except SSHException as e:
             print(str(e))
@@ -504,4 +526,3 @@ class SshPool(AbstractSshPool):
         res = self.exec(kill_command)
         # print_blue(res)
         return res
-

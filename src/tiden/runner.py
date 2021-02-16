@@ -291,13 +291,13 @@ def upload_artifacts(ssh_pool, config, remote_unzip_files):
     :return:''
     """
     log_print("*** Deploy artifacts ***", color='blue')
-    log_print('Preliminary file list for upload: %s' % ', '.join(listdir(config['artifacts_dir'])))
+    log_print(f'Preliminary file list for upload: {", ".join(listdir(config["artifacts_dir"]))}')
     log_print('Exclude already uploaded files')
     remote_artifacts = config['remote']['artifacts_dir']
-    files = ssh_pool.not_uploaded(glob("%s/*" % config['artifacts_dir']), remote_artifacts)
+    files = ssh_pool.not_uploaded(glob(f"{config['artifacts_dir']}/*"), remote_artifacts)
     if len(files) > 0:
-        log_print('Final file list for upload: %s' % ', '.join(files))
-        ssh_pool.upload(files, remote_artifacts)
+        log_print(f'Final file list for upload: {", ".join(files)}')
+        ssh_pool.upload(files, remote_artifacts, internal_download=bool(config.get('init_internal_upload')))
     else:
         log_print('Nothing found for upload')
 
