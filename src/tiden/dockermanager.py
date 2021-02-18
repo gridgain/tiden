@@ -844,7 +844,7 @@ class DockerManager:
         for host, out in load_res.items():
             if 'Loaded image' not in out[0]:
                 raise TidenException(f'Failed to load image on {host}')
-        self.ssh.exec(self._gd(target_hosts, [f'rm {remote_image_path}']))
+        self.ssh.exec(self._gd(target_hosts + [source_host], [f'rm {remote_image_path}']))
 
     def _gd(self, keys, value):
         """
