@@ -145,7 +145,7 @@ class Step:
         self.stacktrace = ""
 
     def __enter__(self):
-        log_print(f'\033[94m[step started]\033[0m {self.name}')
+        log_print(f'[step started] {self.name}', color='bold')
         _, self.unique = _change_report_storage(self.cls, lambda report: report.start_step(self.name, self.parameters))
         return self
 
@@ -154,7 +154,7 @@ class Step:
         self.status = False
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        log_print(f'\033[32m[step ended]\033[0m {self.name}')
+        log_print(f'[step ended] {self.name}', color='bold')
         if exc_val:
             if exc_type not in self.expected_exceptions:
                 self.stacktrace = format_exc()[:5000]
