@@ -447,7 +447,7 @@ class DockerManager:
         kw_params_str = ''
 
         if tag:
-            image_name += tag
+            image_name += f':{tag}'
         if network:
             kw_params["network"] = network
         if ports:
