@@ -28,7 +28,7 @@ from uuid import uuid4
 
 from requests import post
 
-from ..util import log_put
+from ..util import log_print
 
 
 def test_name(name):
@@ -145,8 +145,7 @@ class Step:
         self.stacktrace = ""
 
     def __enter__(self):
-        if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
-            log_put(f'Step {self.name} started', color='debug')
+        log_print(f'[step started] {self.name}', color='bold')
         _, self.unique = _change_report_storage(self.cls, lambda report: report.start_step(self.name, self.parameters))
         return self
 
@@ -155,9 +154,7 @@ class Step:
         self.status = False
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if getattr(self.cls, 'config', False) and 'WardReport' in self.cls.config.get('plugins', []):
-            log_put(f'Step {self.name} ended', color='debug')
-
+        log_print(f'[step ended] {self.name}', color='bold')
         if exc_val:
             if exc_type not in self.expected_exceptions:
                 self.stacktrace = format_exc()[:5000]
