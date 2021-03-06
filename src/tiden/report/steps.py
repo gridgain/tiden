@@ -52,6 +52,7 @@ class InnerReportConfig:
     def __init__(self):
         self.steps = []
         self.title = None
+        self.test_path = None
         self.suites: list = []
 
     def append_steps(self, steps):

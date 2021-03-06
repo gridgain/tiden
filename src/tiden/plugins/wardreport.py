@@ -164,6 +164,7 @@ class WardReport(TidenPlugin):
         self.current_report['steps'] = inner_report_config.steps
         if inner_report_config.title:
             self.current_report['title'] = inner_report_config.title
+        self.current_report['test_path'] = inner_report_config.test_path
         if inner_report_config.suites:
             self.current_report['suites'] = self.current_report['suites'] + inner_report_config.suites
         if exception:
