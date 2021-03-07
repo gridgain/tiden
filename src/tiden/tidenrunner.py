@@ -670,6 +670,7 @@ class TidenRunner:
                 idx_to_add = idx
                 break
         test_report.steps[idx_to_add]['children'] = exec_report.steps + test_report.steps[idx_to_add].get('children', [])
+        test_report.test_path = f'{self.test_module}.{self.current_test_method}'
         title = getattr(getattr(self.test_class, self.current_test_method), '__report_title__', None)
         suites = getattr(getattr(self.test_class, self.current_test_method), '__report_suites__', None)
         if title:
