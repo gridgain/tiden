@@ -1163,8 +1163,7 @@ class Ignite(IgniteComponents, App):
             if self.nodes[node_idx].get('status') in [NodeStatus.STARTED, NodeStatus.STARTING]:
                 node_idxs.append(node_idx)
 
-        attrs = self.grep_log(*node_idxs, **self.get_log_masks())
-        return attrs
+        return self.grep_log(*node_idxs, **self.get_log_masks()) if node_idxs else {}
 
     def stop_piclient(self, node_index, gracefully=False, clear=False):
         if gracefully:
