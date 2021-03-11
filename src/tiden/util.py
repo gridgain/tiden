@@ -32,7 +32,6 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from enum import Enum
 from xml.etree.ElementTree import ElementTree, parse as _parse_xml
-from .apps import MissedRequirementException
 from .logger import get_logger
 from re import search, sub
 from glob import glob
@@ -1344,8 +1343,6 @@ def if_applicable_ignite_version(config, min_version):
             if isinstance(min_version, str):
                 return ignite_version >= version_num(min_version)
             elif isinstance(min_version, dict):
-                if artifact_data['ignite_version'][:3] not in min_version.keys():
-                    raise MissedRequirementException(f"No min_version is set for {artifact_data['ignite_version']}")
                 for base_ver, min_bs_version in min_version.items():
                     if base_ver == artifact_data['ignite_version'][:3]:
                         return ignite_version >= version_num(min_bs_version)
