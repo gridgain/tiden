@@ -59,4 +59,8 @@ class TeamcityIntegration(TidenPlugin):
         if status == 'pass':
             log_print(f"##teamcity[testFinished timestamp='{time_stamp}' name='{test_name}']")
         else:
-            log_print(f"##teamcity[testFailed timestamp='{time_stamp}' name='{test_name}' message='{exception}' details='{self._format_stacktrace(exception_details)}']")
+            log_print(f"##teamcity[testFailed "
+                      f"timestamp='{time_stamp}' "
+                      f"name='{test_name}' "
+                      f"message='{self._format_stacktrace(exception)}' "
+                      f"details='{self._format_stacktrace(exception_details)}']")
