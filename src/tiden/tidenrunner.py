@@ -498,6 +498,7 @@ class TidenRunner:
         known_issue = self.test_plan[self.test_module].all_tests[self.current_test_name].get('known_issue')
         setattr(self.test_class, '_secret_report_storage', InnerReportConfig())
         try:
+            self.__print_tc_test_start(self.current_test_name)
             self.pm.do("before_test_method",
                        test_module=self.test_module,
                        test_name=self.current_test_name,
@@ -547,11 +548,13 @@ class TidenRunner:
 
             # Execute test teardown method
             self.__call_test_setup_teardown('teardown')
+            self.__print_tc_test_end(self.current_test_name, test_status, str(test_exception), tb_msg)
 
             self.pm.do('after_test_method',
                        test_status=test_status,
                        exception=test_exception,
                        stacktrace=tb_msg,
+                       test_name=self.current_test_name,
                        known_issue=known_issue,
                        description=getattr(self.test_class, self.current_test_method, lambda: None).__doc__,
                        inner_report_config=getattr(self, '_secret_report_storage'))
@@ -914,4 +917,15 @@ class TidenRunner:
         return ("%s.%s.%s " % (
             self.test_module, self.test_class_name, msg if msg else self.current_test_method)) \
             .ljust(self.long_path_len, '.')
+
+    def __print_tc_test_start(self, test_name):
+        time_stamp = datetime.now().isoformat()[:-3]
+        log_print(f"##teamcity[testStarted timestamp='{time_stamp}' name='{test_name}']")
+
+    def __print_tc_test_end(self, test_name, status, error_message, exception_details):
+        time_stamp = datetime.now().isoformat()[:-3]
+        if status == 'pass':
+            log_print(f"##teamcity[testFinished timestamp='{time_stamp}' name='{test_name}']")
+        else:
+            log_print(f"##teamcity[testFailed timestamp='{time_stamp}' name='{test_name}' message='{error_message}' details='{exception_details}']")
 
