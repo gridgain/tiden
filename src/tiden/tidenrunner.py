@@ -498,7 +498,6 @@ class TidenRunner:
         known_issue = self.test_plan[self.test_module].all_tests[self.current_test_name].get('known_issue')
         setattr(self.test_class, '_secret_report_storage', InnerReportConfig())
         try:
-            self.__print_tc_test_start(self.current_test_name)
             self.pm.do("before_test_method",
                        test_module=self.test_module,
                        test_name=self.current_test_name,
@@ -548,7 +547,6 @@ class TidenRunner:
 
             # Execute test teardown method
             self.__call_test_setup_teardown('teardown')
-            self.__print_tc_test_end(self.current_test_name, test_status, str(test_exception), tb_msg)
 
             self.pm.do('after_test_method',
                        test_status=test_status,
