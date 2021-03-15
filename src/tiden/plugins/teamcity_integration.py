@@ -56,11 +56,11 @@ class TeamcityIntegration(TidenPlugin):
         time_stamp = datetime.now().isoformat()[:-3]
         test_name = self._format_stacktrace(test_name)
 
-        if status == 'pass':
-            log_print(f"##teamcity[testFinished timestamp='{time_stamp}' name='{test_name}']")
-        else:
+        if status != 'pass':
             log_print(f"##teamcity[testFailed "
                       f"timestamp='{time_stamp}' "
                       f"name='{test_name}' "
                       f"message='{self._format_stacktrace(exception)}' "
                       f"details='{self._format_stacktrace(exception_details)}']")
+
+        log_print(f"##teamcity[testFinished timestamp='{time_stamp}' name='{test_name}']")
