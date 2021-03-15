@@ -22,7 +22,7 @@ from tiden.tidenplugin import TidenPlugin
 TIDEN_PLUGIN_VERSION = '1.0.0'
 
 
-class TeamcityIntegrationPlugin(TidenPlugin):
+class TeamcityIntegration(TidenPlugin):
 
     def before_test_method(self, *args, **kwargs):
         test_name = kwargs.get('test_name')
