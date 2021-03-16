@@ -552,6 +552,7 @@ class TidenRunner:
                        test_status=test_status,
                        exception=test_exception,
                        stacktrace=tb_msg,
+                       test_name=self.current_test_name,
                        known_issue=known_issue,
                        description=getattr(self.test_class, self.current_test_method, lambda: None).__doc__,
                        inner_report_config=getattr(self, '_secret_report_storage'))
@@ -914,4 +915,15 @@ class TidenRunner:
         return ("%s.%s.%s " % (
             self.test_module, self.test_class_name, msg if msg else self.current_test_method)) \
             .ljust(self.long_path_len, '.')
+
+    def __print_tc_test_start(self, test_name):
+        time_stamp = datetime.now().isoformat()[:-3]
+        log_print(f"##teamcity[testStarted timestamp='{time_stamp}' name='{test_name}']")
+
+    def __print_tc_test_end(self, test_name, status, error_message, exception_details):
+        time_stamp = datetime.now().isoformat()[:-3]
+        if status == 'pass':
+            log_print(f"##teamcity[testFinished timestamp='{time_stamp}' name='{test_name}']")
+        else:
+            log_print(f"##teamcity[testFailed timestamp='{time_stamp}' name='{test_name}' message='{error_message}' details='{exception_details}']")
 
