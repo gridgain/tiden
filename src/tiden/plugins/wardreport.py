@@ -43,12 +43,9 @@ class WardReport(TidenPlugin):
         self.report_url = self.options['url']
         self.files_report_url = self.options['files_url']
         self.upload_logs = self.options['upload_logs']
+        self.tc_build_id = self.options.get('tc_build_id')
         self.force_report_as_release = self.options.get('report_as_release', None)
         self.run_id = str(uuid4())
-
-        if environ.get('BUILD_URL'):
-            self.running_on_jenkins = True
-
         self.current_report: dict = {}
 
     def report_base(self):
@@ -71,6 +68,8 @@ class WardReport(TidenPlugin):
         }
         if environ.get('BUILD_URL'):
             result['data']['jenkins_build_url'] = environ['BUILD_URL']
+        elif self.tc_build_id:
+            result['data']['tc_build_id'] = self.tc_build_id
         return result
 
     def pretty_datetime(self, time):
