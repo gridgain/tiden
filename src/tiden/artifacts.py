@@ -390,6 +390,12 @@ def repack(artifact_name, src_path, checksum, work_dir, rules, artifacts_dir, ar
                 mkdir(extract_dir)
                 with data["open"](src_path, data["mode"]) as arch:
                     arch.extractall(extract_dir)
+
+                # custom artifact name
+                name = artifacts[artifact_name].get('name')
+                if name:
+                    src_path = f'{name}{data["pattern"]}'
+
                 new_zip_file = join(work_dir, basename(src_path).replace(data["pattern"], '.repack.zip'))
 
         assert new_zip_file is not None, "Can't find unzip operation for {} file".format(basename(src_path))
