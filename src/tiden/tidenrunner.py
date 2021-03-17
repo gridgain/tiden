@@ -28,7 +28,8 @@ from .sshpool import SshPool
 from uuid import uuid4
 from traceback import format_exc
 
-from .runner import set_configuration_options, get_configuration_representation, get_actual_configuration
+from .runner import set_configuration_options, get_configuration_representation, get_actual_configuration, \
+    set_default_configuration
 
 from importlib import import_module
 from os import path, mkdir, remove
@@ -209,6 +210,9 @@ class TidenRunner:
             # find test methods:
             if hasattr(self.test_class, '__configurations__'):
                 cfg_options = getattr(self.test_class, '__configuration_options__')
+                if hasattr(self.test_class, '__configuration_defaults__'):
+                    set_default_configuration(self.config, cfg_options,
+                                              getattr(self.test_class, '__configuration_defaults__'))
                 configuration = get_actual_configuration(self.config, cfg_options)
 
                 log_print("Configuration options for %s:\n%s" % (self.test_class.__class__.__name__,

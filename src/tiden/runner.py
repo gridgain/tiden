@@ -26,7 +26,7 @@ from shutil import rmtree
 import yaml
 
 from .tidenexception import TidenException
-from .util import log_print, print_red, cfg
+from .util import log_print, print_red, cfg, get_nested_key, set_nested_key
 
 
 def get_long_path_len(modules):
@@ -70,6 +70,12 @@ def get_configuration_representation(cfg_options, configuration):
         else:
             cfg_representation.append(cfg_option + '=' + "'" + str(configuration[i]) + "'")
     return '(' + ', '.join(cfg_representation) + ')'
+
+
+def set_default_configuration(config, cfg_options, default_values):
+    for cfg_option, default_value in zip(cfg_options, default_values):
+        if get_nested_key(config, cfg_option) is None:
+            set_nested_key(config, cfg_option, default_value)
 
 
 def get_actual_configuration(config, cfg_options):

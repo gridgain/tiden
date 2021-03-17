@@ -16,15 +16,18 @@
 
 from .generators import gen_permutations
 
-
 def test_configuration(*args):
     def test_configuration_decorator(cls):
         assert len(args) > 0
-        if len(args) >= 1:
-            configuration_options = args[0]
-        if len(args) >= 2:
-            configurations = args[1]
-        else:
+
+        args0 = list(args)
+        while len(args0) < 3:
+            args0.append([])
+        assert all(map(lambda c: isinstance(c, list), args0))
+
+        configuration_options, configurations, configuration_defaults = args0
+
+        if not configurations:
             configurations = list(
                 gen_permutations([
                     [True, False]
@@ -33,8 +36,14 @@ def test_configuration(*args):
                     if configuration_option.endswith('_enabled')
                 ])
             )
+
         cls.__configuration_options__ = configuration_options.copy()
         cls.__configurations__ = configurations.copy()
+
+        if configuration_defaults:
+            assert len(configuration_options) == len(configuration_defaults)
+            cls.__configuration_defaults__ = configuration_defaults.copy()
+
         return cls
     return test_configuration_decorator
 
