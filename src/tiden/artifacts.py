@@ -391,7 +391,6 @@ def repack(artifact_name, src_path, checksum, work_dir, rules, artifacts_dir, ar
                 with data["open"](src_path, data["mode"]) as arch:
                     arch.extractall(extract_dir)
 
-                # custom artifact name
                 custom_name = artifacts[artifact_name].get('name')
                 new_zip_file_name = f'{custom_name}{data["pattern"]}' if custom_name else basename(src_path)
                 new_zip_file_name = new_zip_file_name.replace(data["pattern"], f'.repack.{data["pattern"]}')
