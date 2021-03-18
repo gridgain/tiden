@@ -41,13 +41,14 @@ def test_configuration(*args):
         assert all(map(
             lambda c: isinstance(c, list),
             configuration_options, configurations, configuration_defaults
-        ))
+        )), 'Test configuration accepts only lists'
 
         cls.__configuration_options__ = configuration_options.copy()
         cls.__configurations__ = configurations.copy()
 
         if configuration_defaults:
-            assert len(configuration_options) == len(configuration_defaults)
+            assert len(configuration_options) == len(configuration_defaults), \
+                'Please set defaults for all configuration options'
             cls.__configuration_defaults__ = configuration_defaults.copy()
 
         return cls
