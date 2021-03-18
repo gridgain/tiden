@@ -18,6 +18,7 @@ from .generators import gen_permutations
 
 CONFIG_NOT_APPLICABLE_OPTION = 'CONFIG_NOT_APPLICABLE_OPTION'
 
+
 def test_configuration(*args):
     def test_configuration_decorator(cls):
         assert len(args) > 0
@@ -25,8 +26,6 @@ def test_configuration(*args):
         args0 = list(args)
         while len(args0) < 3:
             args0.append([])
-        assert all(map(lambda c: isinstance(c, list), args0))
-
         configuration_options, configurations, configuration_defaults = args0
 
         if not configurations:
@@ -39,6 +38,11 @@ def test_configuration(*args):
                 ])
             )
 
+        assert all(map(
+            lambda c: isinstance(c, list),
+            configuration_options, configurations, configuration_defaults
+        ))
+
         cls.__configuration_options__ = configuration_options.copy()
         cls.__configurations__ = configurations.copy()
 
@@ -48,4 +52,3 @@ def test_configuration(*args):
 
         return cls
     return test_configuration_decorator
-
