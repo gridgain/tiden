@@ -16,6 +16,8 @@
 
 from .generators import gen_permutations
 
+CONFIG_NOT_APPLICABLE_OPTION = 'CONFIG_NOT_APPLICABLE_OPTION'
+
 def test_configuration(*args):
     def test_configuration_decorator(cls):
         assert len(args) > 0
