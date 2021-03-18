@@ -19,37 +19,35 @@ from .generators import gen_permutations
 CONFIG_NOT_APPLICABLE_OPTION = 'CONFIG_NOT_APPLICABLE_OPTION'
 
 
-def test_configuration(*args):
-    def test_configuration_decorator(cls):
-        assert len(args) > 0, 'Test configuration is empty'
+class test_configuration:
+    def __init__(self, options: list, possible_values: list = None, default_values: list = None):
+        assert options, 'Test configuration is empty'
 
-        args0 = list(args)
-        while len(args0) < 3:
-            args0.append([])
-        configuration_options, configurations, configuration_defaults = args0
+        self.options = options
+        self.possible_values = possible_values
+        self.default_values = default_values
 
-        if not configurations:
-            configurations = list(
+        if not self.possible_values:
+            self.possible_values = list(
                 gen_permutations([
                     [True, False]
                     for configuration_option
-                    in configuration_options
+                    in options
                     if configuration_option.endswith('_enabled')
                 ])
             )
 
-        assert all(map(
-            lambda c: isinstance(c, list),
-            (configuration_options, configurations, configuration_defaults)
-        )), 'Test configuration accepts only lists'
+        assert isinstance(self.possible_values, list) and isinstance(self.possible_values, list), \
+            'Test configuration accepts only lists'
 
-        cls.__configuration_options__ = configuration_options.copy()
-        cls.__configurations__ = configurations.copy()
+        if self.default_values:
+            assert isinstance(self.default_values, list), 'Test configuration accepts only lists'
+            assert len(self.default_values) == len(self.options), 'Please set defaults for all configuration options'
 
-        if configuration_defaults:
-            assert len(configuration_options) == len(configuration_defaults), \
-                'Please set defaults for all configuration options'
-            cls.__configuration_defaults__ = configuration_defaults.copy()
+    def __call__(self, cls):
+        cls.__configuration_options__ = self.options
+        cls.__configurations__ = self.possible_values
+        if self.default_values:
+            cls.__configuration_defaults__ = self.default_values
 
         return cls
-    return test_configuration_decorator
