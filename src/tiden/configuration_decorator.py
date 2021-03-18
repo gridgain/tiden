@@ -40,7 +40,7 @@ def test_configuration(*args):
 
         assert all(map(
             lambda c: isinstance(c, list),
-            configuration_options, configurations, configuration_defaults
+            (configuration_options, configurations, configuration_defaults)
         )), 'Test configuration accepts only lists'
 
         cls.__configuration_options__ = configuration_options.copy()
