@@ -69,8 +69,9 @@ class EnvExpander(TidenPlugin):
                 output_config = {}
                 if len(var_values) == 0:
                     var_values = ['']
-                for var_value in var_values:
+                for i, var_value in enumerate(var_values):
                     env[var_name] = var_value
+                    env['EXPANDER_COUNTER'] = str(i + 1)
                     tmp_config = {}
                     self._patch_config_with_env(input_config, tmp_config, env)
                     mergedict(tmp_config, output_config)
