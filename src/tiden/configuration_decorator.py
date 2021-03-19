@@ -37,7 +37,7 @@ class test_configuration:
                 ])
             )
 
-        assert isinstance(self.possible_values, list) and isinstance(self.possible_values, list), \
+        assert isinstance(self.options, list) and isinstance(self.possible_values, list), \
             'Test configuration accepts only lists'
 
         if self.default_values:
