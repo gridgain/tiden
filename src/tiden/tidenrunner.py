@@ -28,7 +28,8 @@ from .sshpool import SshPool
 from uuid import uuid4
 from traceback import format_exc
 
-from .runner import set_configuration_options, get_configuration_representation, get_actual_configuration
+from .runner import set_configuration_options, get_configuration_representation, get_actual_configuration, \
+    set_default_configuration
 
 from importlib import import_module
 from os import path, mkdir, remove
@@ -209,7 +210,10 @@ class TidenRunner:
             # find test methods:
             if hasattr(self.test_class, '__configurations__'):
                 cfg_options = getattr(self.test_class, '__configuration_options__')
-                configuration = get_actual_configuration(self.config, cfg_options)
+                if hasattr(self.test_class, '__configuration_defaults__'):
+                    set_default_configuration(self.config, cfg_options,
+                                              getattr(self.test_class, '__configuration_defaults__'))
+                cfg_options, configuration = get_actual_configuration(self.config, cfg_options)
 
                 log_print("Configuration options for %s:\n%s" % (self.test_class.__class__.__name__,
                                                                  '\n'.join([
@@ -360,7 +364,7 @@ class TidenRunner:
             if cfg_options is None:
                 cfg_options = getattr(self.test_class, '__configuration_options__')
             if configuration is None:
-                configuration = get_actual_configuration(self.config, cfg_options)
+                cfg_options, configuration = get_actual_configuration(self.config, cfg_options)
             configuration_representation = get_configuration_representation(cfg_options, configuration)
             self.current_test_name = self.current_test_method + configuration_representation
         else:

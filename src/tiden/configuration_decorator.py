@@ -16,25 +16,38 @@
 
 from .generators import gen_permutations
 
+CONFIG_NOT_APPLICABLE_OPTION = 'CONFIG_NOT_APPLICABLE_OPTION'
 
-def test_configuration(*args):
-    def test_configuration_decorator(cls):
-        assert len(args) > 0
-        if len(args) >= 1:
-            configuration_options = args[0]
-        if len(args) >= 2:
-            configurations = args[1]
-        else:
-            configurations = list(
+
+class test_configuration:
+    def __init__(self, options: list, possible_values: list = None, default_values: list = None):
+        assert options, 'Test configuration is empty'
+
+        self.options = options
+        self.possible_values = possible_values
+        self.default_values = default_values
+
+        if not self.possible_values:
+            self.possible_values = list(
                 gen_permutations([
                     [True, False]
                     for configuration_option
-                    in configuration_options
+                    in options
                     if configuration_option.endswith('_enabled')
                 ])
             )
-        cls.__configuration_options__ = configuration_options.copy()
-        cls.__configurations__ = configurations.copy()
-        return cls
-    return test_configuration_decorator
 
+        assert isinstance(self.options, list) and isinstance(self.possible_values, list), \
+            'Test configuration accepts only lists'
+
+        if self.default_values:
+            assert isinstance(self.default_values, list), 'Test configuration accepts only lists'
+            assert len(self.default_values) == len(self.options), 'Please set defaults for all configuration options'
+
+    def __call__(self, cls):
+        cls.__configuration_options__ = self.options
+        cls.__configurations__ = self.possible_values
+        if self.default_values:
+            cls.__configuration_defaults__ = self.default_values
+
+        return cls

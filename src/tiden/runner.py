@@ -25,8 +25,9 @@ from shutil import rmtree
 
 import yaml
 
+from .configuration_decorator import CONFIG_NOT_APPLICABLE_OPTION
 from .tidenexception import TidenException
-from .util import log_print, print_red, cfg
+from .util import log_print, print_red, cfg, get_nested_key, set_nested_key
 
 
 def get_long_path_len(modules):
@@ -72,15 +73,25 @@ def get_configuration_representation(cfg_options, configuration):
     return '(' + ', '.join(cfg_representation) + ')'
 
 
+def set_default_configuration(config, cfg_options, default_values):
+    for cfg_option, default_value in zip(cfg_options, default_values):
+        if get_nested_key(config, cfg_option) is None:
+            set_nested_key(config, cfg_option, default_value)
+
+
 def get_actual_configuration(config, cfg_options):
-    configuration = []
+    actual_cfg_options = []
+    cfg_values = []
     for cfg_option in cfg_options:
         cfg_option_value = cfg(config, cfg_option)
+        if cfg_option_value == CONFIG_NOT_APPLICABLE_OPTION:
+            continue
         if cfg_option_value is None:
             raise TidenException(
-                "Expected configuration option '%s' not set, please pass its value with --to arg!" % cfg_option)
-        configuration.append(cfg_option_value)
-    return configuration
+                f"Expected configuration option '{cfg_option}' not set, please pass its value with --to arg!")
+        actual_cfg_options.append(cfg_option)
+        cfg_values.append(cfg_option_value)
+    return actual_cfg_options, cfg_values
 
 
 def get_test_modules(config, collect_only=False):
