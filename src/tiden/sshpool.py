@@ -19,7 +19,7 @@ from hashlib import md5
 from multiprocessing.dummy import Pool as ThreadPool
 from os import path
 from os.path import basename
-from re import search, split
+from re import search, split, sub
 from time import sleep
 from typing import Dict, List
 
@@ -246,14 +246,6 @@ class SshPool(AbstractSshPool):
                 commands_for_hosts.append(
                     [host, [commands]]
                 )
-        # No sudo is needed if running inside a Docker container
-        commands_for_hosts_no_sudo = []
-        for host, commands in commands_for_hosts:
-            if host in self.docker_hosts:
-                commands = list(map(lambda cmd: cmd.replace('sudo', ''), commands))
-            commands_for_hosts_no_sudo.append(
-                [host, commands]
-            )
         commands_for_hosts = commands_for_hosts_no_sudo
         pool = ThreadPool(self.threads_num)
         raw_results = pool.starmap(partial(self.exec_on_host, **kwargs), commands_for_hosts)
@@ -288,6 +280,9 @@ class SshPool(AbstractSshPool):
                     command += ' 2>&1'
                 if env_vars != '' and command.split()[0] not in self.no_java_commands:
                     command = f"{env_vars}{command}"
+                # Remove sudo with options if the host is a Docker container
+                if host in self.docker_hosts:
+                    command = sub(r'sudo(\s+[-]{1,2}\S*)*', '', command)
                 # TODO we should handle stderr
                 get_logger('ssh_pool').debug(f'{host} >> {command}')
                 stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
