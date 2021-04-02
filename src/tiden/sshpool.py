@@ -138,7 +138,7 @@ class SshPool(AbstractSshPool):
                         break
                     # Check whether host is a Docker container
                     ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('cat /proc/1/cgroup')
-                    if any(map(lambda l: l.contains('docker'), ssh_stdout)):
+                    if any(map(lambda l: 'docker' in l, ssh_stdout)):
                         log_print(f'{host} is a Docker container')
                         self.docker_hosts.add(host)
                 except socket.gaierror as e:
