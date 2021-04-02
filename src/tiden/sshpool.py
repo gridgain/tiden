@@ -246,7 +246,6 @@ class SshPool(AbstractSshPool):
                 commands_for_hosts.append(
                     [host, [commands]]
                 )
-        commands_for_hosts = commands_for_hosts_no_sudo
         pool = ThreadPool(self.threads_num)
         raw_results = pool.starmap(partial(self.exec_on_host, **kwargs), commands_for_hosts)
         results = {}
