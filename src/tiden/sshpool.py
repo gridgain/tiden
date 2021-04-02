@@ -19,7 +19,7 @@ from hashlib import md5
 from multiprocessing.dummy import Pool as ThreadPool
 from os import path
 from os.path import basename
-from re import search, split
+from re import search, split, sub
 from time import sleep
 from typing import Dict, List
 
@@ -50,6 +50,7 @@ class SshPool(AbstractSshPool):
         if self.retries is None:
             self.retries = 3
         self.clients = {}
+        self.docker_hosts = set()
 
         self.trace_info()
 
@@ -135,6 +136,11 @@ class SshPool(AbstractSshPool):
                             attempt = self.retries + 1
                             connected = True
                         break
+                    # Check whether host is a Docker container
+                    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('cat /proc/1/cgroup')
+                    if any(map(lambda l: 'docker' in l, ssh_stdout)):
+                        log_print(f'{host} is a Docker container')
+                        self.docker_hosts.add(host)
                 except socket.gaierror as e:
                     log_print('', 2)
                     log_print("ERROR: host '%s' is incorrect \n" % host, color='red')
@@ -273,6 +279,9 @@ class SshPool(AbstractSshPool):
                     command += ' 2>&1'
                 if env_vars != '' and command.split()[0] not in self.no_java_commands:
                     command = f"{env_vars}{command}"
+                # Remove sudo with options if the host is a Docker container
+                if host in self.docker_hosts:
+                    command = sub(r'sudo(\s+[-]{1,2}\S*)*', '', command)
                 # TODO we should handle stderr
                 get_logger('ssh_pool').debug(f'{host} >> {command}')
                 stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
