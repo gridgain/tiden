@@ -50,6 +50,7 @@ class SshPool(AbstractSshPool):
         if self.retries is None:
             self.retries = 3
         self.clients = {}
+        self.docker_hosts = set()
 
         self.trace_info()
 
@@ -135,6 +136,11 @@ class SshPool(AbstractSshPool):
                             attempt = self.retries + 1
                             connected = True
                         break
+                    # Check whether host is a Docker container
+                    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('cat /proc/1/cgroup')
+                    if any(map(lambda l: l.contains('docker'), ssh_stdout)):
+                        log_print(f'{host} is a Docker container')
+                        self.docker_hosts.add(host)
                 except socket.gaierror as e:
                     log_print('', 2)
                     log_print("ERROR: host '%s' is incorrect \n" % host, color='red')
@@ -240,6 +246,15 @@ class SshPool(AbstractSshPool):
                 commands_for_hosts.append(
                     [host, [commands]]
                 )
+        # No sudo is needed if running inside a Docker container
+        commands_for_hosts_no_sudo = []
+        for host, commands in commands_for_hosts:
+            if host in self.docker_hosts:
+                commands = list(map(lambda cmd: cmd.replace('sudo', ''), commands))
+            commands_for_hosts_no_sudo.append(
+                [host, commands]
+            )
+        commands_for_hosts = commands_for_hosts_no_sudo
         pool = ThreadPool(self.threads_num)
         raw_results = pool.starmap(partial(self.exec_on_host, **kwargs), commands_for_hosts)
         results = {}
