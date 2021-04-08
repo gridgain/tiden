@@ -1364,7 +1364,7 @@ class Ignite(IgniteComponents, App):
                 "|java.lang.NullPointerException"
                 "|java.lang.[a-zA-Z0-9\._]+(Exception"
                 "|Error): )"
-                "|\] Fail"
+                "|\[ERROR\].+\] Fail"
                 "|\] Critical"
                 "|Error: Failed"
                 "|\(err\) Failed"
