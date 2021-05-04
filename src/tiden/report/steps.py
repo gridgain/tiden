@@ -54,6 +54,7 @@ class InnerReportConfig:
         self.title = None
         self.test_path = None
         self.suites: list = []
+        self.aux_fields = {}
 
     def append_steps(self, steps):
         self.steps.append(steps)
@@ -134,6 +135,9 @@ class InnerReportConfig:
             pretty_diff = f'{diff}s'
         return pretty_diff
 
+    def add_aux_field(self, name, val):
+        self.aux_fields[name] = val
+
 
 class Step:
     def __init__(self, cls, name, parameters: List[dict] = None, expected_exceptions: list = None):
@@ -198,6 +202,10 @@ def add_attachment(cls, name, data, attachment_type: AttachmentType = Attachment
     }
     report: InnerReportConfig
     _change_report_storage(cls, lambda report: report.add_attachment(attachment))
+
+
+def add_report_field(cls, name, val):
+    _change_report_storage(cls, lambda report: report.add_aux_field(name, val))
 
 
 def _change_report_storage(cls, action):
