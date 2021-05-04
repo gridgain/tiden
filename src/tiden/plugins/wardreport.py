@@ -171,7 +171,7 @@ class WardReport(TidenPlugin):
         if exception:
             self.current_report['stacktrace'] = f'{exception}\n{stacktrace}'
         try:
-            if post(f'{self.report_url}/add_test', json=self.current_report).status_code != 200:
+            if post(f'{self.report_url}', json=self.current_report).status_code != 200:
                 print(f'Failed to add: {self.current_report["title"]}')
         except:
             self.log_print(f'ERROR: Failed to send test. Please check if WARD is alive: https://ward.gridgain.com/tests/',
