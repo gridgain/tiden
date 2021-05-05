@@ -167,7 +167,10 @@ class WardReport(TidenPlugin):
         if inner_report_config.suites:
             self.current_report['suites'] = self.current_report['suites'] + inner_report_config.suites
         for field, value in inner_report_config.aux_fields.items():
-            self.current_report[field] = value
+            if value is None and self.current_report.get(field) is not None:
+                self.current_report.pop(field)
+            else:
+                self.current_report[field] = value
         if exception:
             self.current_report['stacktrace'] = f'{exception}\n{stacktrace}'
         try:

@@ -681,6 +681,8 @@ class TidenRunner:
         if title:
             test_report.title = title
             test_report.suites = suites
+        if exec_report.aux_fields:
+            test_report.aux_fields = exec_report.aux_fields
         setattr(self, '_secret_report_storage', test_report)
         setattr(self.test_class, '_secret_report_storage', InnerReportConfig())
 
