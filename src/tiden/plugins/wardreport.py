@@ -174,6 +174,7 @@ class WardReport(TidenPlugin):
         if exception:
             self.current_report['stacktrace'] = f'{exception}\n{stacktrace}'
         try:
+            self.log_print('Sending test result to WARD')
             if post(f'{self.report_url}', json=self.current_report).status_code != 200:
                 print(f'Failed to add: {self.current_report["title"]}')
         except:
