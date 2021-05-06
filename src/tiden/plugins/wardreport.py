@@ -45,6 +45,7 @@ class WardReport(TidenPlugin):
         self.upload_logs = self.options['upload_logs']
         self.tc_build_id = self.options.get('tc_build_id')
         self.force_report_as_release = self.options.get('report_as_release', None)
+        self.main_section = self.options.get('section', 'Distributed tests')
         self.run_id = str(uuid4())
         self.current_report: dict = {}
 
@@ -95,7 +96,7 @@ class WardReport(TidenPlugin):
         return suites_base
 
     def modify_test_name(self, test_name):
-        return sub('^test_', '', test_name).replace('(', ' (')
+        return sub(r'^test_(ignite_)?', '', test_name).replace('(', ' (')
 
     def before_test_method(self, *args, **kwargs):
         """
@@ -116,7 +117,7 @@ class WardReport(TidenPlugin):
         self.current_report['time']['start'] = round(time() * 1000)
         self.current_report['time']['start_pretty'] = self.pretty_datetime(time())
 
-        self.current_report['suites'] = ['Distributed tests',
+        self.current_report['suites'] = [self.main_section,
                                          self.find_version(artifacts),
                                          *self.find_suites(test_module, self.current_report['title'])]
         jenkins_job_name: str = environ.get('JOB_NAME')
