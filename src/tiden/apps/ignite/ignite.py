@@ -349,10 +349,6 @@ class Ignite(IgniteComponents, App):
         :return:
         """
         assert self._setup, "Ignite.setup() should be called before using start_node"
-        if not self.is_default_node(node_id):
-            log_print('WARN: You can\'t use ID greater than %d as it used for other nodes.' %
-                      self.ADDITIONAL_NODE_START_ID)
-            return
 
         if self.nodes.get(node_id) and self.nodes[node_id]['status'] == NodeStatus.STARTED:
             if force:
