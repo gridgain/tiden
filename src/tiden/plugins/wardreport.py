@@ -29,6 +29,19 @@ from tiden.report.steps import InnerReportConfig
 TIDEN_PLUGIN_VERSION = '1.0.0'
 
 
+# Class decorator
+class ward_configuration:
+    def __init__(self, config_to_subsections=False, strip_test_module=False):
+        self.config_to_subsections = config_to_subsections
+        self.strip_test_module = strip_test_module
+
+    def __call__(self, cls):
+        cls.__config_to_subsections__ = self.config_to_subsections
+        cls.__strip_test_module__ = self.strip_test_module
+
+        return cls
+
+
 class WardReport(TidenPlugin):
 
     statuses_parse = {
@@ -90,7 +103,9 @@ class WardReport(TidenPlugin):
         return found_version
 
     def find_suites(self, module_name: str, test_name: str):
-        suites_base = [module_name.split('.')[1].replace('test_', '')]
+        suites_base = []
+        if module_name:
+            suites_base.append(module_name.split('.')[1].replace('test_', ''))
         if '(' in test_name:
             suites_base.append(test_name[:test_name.index('(')].strip())
         return suites_base
@@ -107,6 +122,7 @@ class WardReport(TidenPlugin):
                 test_name           'test_snapshot(wal_compaction=False,...)'
         """
         test_module = kwargs.get('test_module')
+        test_class = kwargs.get('test_class')
         artifacts = kwargs.get('artifacts')
         test_name = kwargs.get('test_name')
         if not test_module or not artifacts or not test_name:
@@ -117,9 +133,12 @@ class WardReport(TidenPlugin):
         self.current_report['time']['start'] = round(time() * 1000)
         self.current_report['time']['start_pretty'] = self.pretty_datetime(time())
 
+        test_module_in_suites = test_module
+        if getattr(test_class, '__strip_test_module__', False):
+            test_module_in_suites = ''
         self.current_report['suites'] = [self.main_section,
                                          self.find_version(artifacts),
-                                         *self.find_suites(test_module, self.current_report['title'])]
+                                         *self.find_suites(test_module_in_suites, self.current_report['title'])]
         jenkins_job_name: str = environ.get('JOB_NAME')
         report_as_release_branch = jenkins_job_name and jenkins_job_name.startswith('release')
         if any([

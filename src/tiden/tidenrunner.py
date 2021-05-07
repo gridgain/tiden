@@ -365,8 +365,20 @@ class TidenRunner:
                 cfg_options = getattr(self.test_class, '__configuration_options__')
             if configuration is None:
                 cfg_options, configuration = get_actual_configuration(self.config, cfg_options)
-            configuration_representation = get_configuration_representation(cfg_options, configuration)
-            self.current_test_name = self.current_test_method + configuration_representation
+            if getattr(self.test_class, '__config_to_subsections__', None):
+                from tiden.report.steps import suites as suites_decorator
+                from tiden.util import decorate_method
+
+                self.current_test_name = self.current_test_method
+                suites = get_configuration_representation(cfg_options, configuration, return_as_list=True)
+                decorate_method(self.test_class, getattr(self.test_class, self.current_test_method),
+                                decorator_func=suites_decorator, decorator_args=[suites])
+                pass
+                # setattr(getattr(self.test_class, self.current_test_method), '__report_suites__', suites)
+                # setattr(self.current_test_method, '__report_suites__', suites)
+            else:
+                configuration_representation = get_configuration_representation(cfg_options, configuration)
+                self.current_test_name = self.current_test_method + configuration_representation
         else:
             self.current_test_name = self.current_test_method
 
@@ -504,6 +516,7 @@ class TidenRunner:
         try:
             self.pm.do("before_test_method",
                        test_module=self.test_module,
+                       test_class=self.test_class,
                        test_name=self.current_test_name,
                        artifacts=self.config.get('artifacts', {}))
             self.result.start_testcase(self.test_class, self.current_test_name)
@@ -680,6 +693,7 @@ class TidenRunner:
         suites = getattr(getattr(self.test_class, self.current_test_method), '__report_suites__', None)
         if title:
             test_report.title = title
+        if suites:
             test_report.suites = suites
         if exec_report.aux_fields:
             test_report.aux_fields = exec_report.aux_fields

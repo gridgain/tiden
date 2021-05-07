@@ -59,7 +59,7 @@ def set_configuration_options(cfg_options, config, configuration):
     TidenFabric().setConfig(config)
 
 
-def get_configuration_representation(cfg_options, configuration):
+def get_configuration_representation(cfg_options, configuration, return_as_list=False):
     cfg_representation = []
     for i, cfg_option in enumerate(cfg_options):
         if type(configuration[i]) == type(True):
@@ -70,6 +70,8 @@ def get_configuration_representation(cfg_options, configuration):
             cfg_representation.append(cfg_option + '=' + configuration[i])
         else:
             cfg_representation.append(cfg_option + '=' + "'" + str(configuration[i]) + "'")
+    if return_as_list:
+        return cfg_representation
     return '(' + ', '.join(cfg_representation) + ')'
 
 

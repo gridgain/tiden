@@ -816,6 +816,20 @@ def echo(func):
     return wrapped
 
 
+def decorate_method(class_obj, class_obj_method, decorator_func, decorator_args=None, decorator_kwargs=None):
+    """
+    Decorate an object's method with given function decorator
+    """
+    from types import MethodType
+
+    if decorator_args is None:
+        decorator_args = []
+    if decorator_kwargs is None:
+        decorator_kwargs = {}
+    decorated_func = decorator_func(*decorator_args, **decorator_kwargs)(class_obj_method.__func__)
+    setattr(class_obj, class_obj_method.__name__, MethodType(decorated_func, class_obj))
+
+
 def calculate_sha256(file):
     import hashlib
 
